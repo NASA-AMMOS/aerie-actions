@@ -2,7 +2,8 @@
   "name": "aerie-actions",
   "version": "0.0.1",
   "scripts": {
-    "build": "rimraf dist && tsc"
+    "build": "rimraf dist && tsc",
+    "postinstall": "npm run build"
   },
   "author": "",
   "description": "",
