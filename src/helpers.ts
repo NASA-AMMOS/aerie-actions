@@ -27,3 +27,18 @@ export async function getFromAerie(aerieInstanceUrl: string, endpoint: string, a
 
   return await response.json();
 }
+
+// API for reading/writing sequences (& other files?) in workspace
+
+export async function listFiles(): Promise<string[]> {
+  console.warn(`List files - Not yet implemented`);
+  return ["not implemented"];
+}
+export async function readFile(path: string): Promise<string> {
+  console.warn(`Read file ${path} - Not yet implemented`);
+  return "not implemented";
+}
+export async function writeFile(path: string, contents: string): Promise<void> {
+  console.warn(`Write "${contents.slice(0, 50)}..." to ${path} - Not yet implemented`);
+}
+
