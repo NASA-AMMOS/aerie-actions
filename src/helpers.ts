@@ -1,8 +1,28 @@
-export async function createSequence(): Promise<void> {}
-export async function getSequence(id: string): Promise<void> {}
-// TODO: Workspace ID might be provided in the VM like our authToken?
-export async function listSequences(workspaceId: string): Promise<void> {}
-export async function updateSequence(): Promise<void> {}
+import {Pool} from "pg";
+
+export class Actions {
+  pool: Pool;
+  workspaceId: number;
+
+  constructor(pool: Pool, workspaceId: number) {
+    this.pool = pool;
+    this.workspaceId = workspaceId;
+  }
+
+  async listSequences(): Promise<any> {
+    console.warn(`List files - Not yet implemented`);
+    return await this.pool.query(`
+      SELECT name, id FROM user_sequence WHERE workspace_id = $1;
+    `, [this.workspaceId]);
+  }
+  async readSequence(path: string): Promise<string> {
+    console.warn(`Read file ${path} - Not yet implemented`);
+    return "not implemented";
+  }
+  async writeSequence(path: string, contents: string): Promise<void> {
+    console.warn(`Write "${contents.slice(0, 50)}..." to ${path} - Not yet implemented`);
+  }
+}
 
 export async function postToAerie(aerieInstanceUrl: string, endpoint: string, authToken: string): Promise<any> {
   const response = await fetch(`${aerieInstanceUrl}/${endpoint}`, {
@@ -30,15 +50,15 @@ export async function getFromAerie(aerieInstanceUrl: string, endpoint: string, a
 
 // API for reading/writing sequences (& other files?) in workspace
 
-export async function listFiles(): Promise<string[]> {
+export async function listSequences(): Promise<string[]> {
   console.warn(`List files - Not yet implemented`);
   return ["not implemented"];
 }
-export async function readFile(path: string): Promise<string> {
+export async function readSequence(path: string): Promise<string> {
   console.warn(`Read file ${path} - Not yet implemented`);
   return "not implemented";
 }
-export async function writeFile(path: string, contents: string): Promise<void> {
+export async function writeSequence(path: string, contents: string): Promise<void> {
   console.warn(`Write "${contents.slice(0, 50)}..." to ${path} - Not yet implemented`);
 }
 
