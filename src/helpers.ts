@@ -1,17 +1,17 @@
-import {Client} from "pg";
+import {PoolClient} from "pg";
 
 export class Actions {
-  pgClient: Client;
+  dbClient: PoolClient;
   workspaceId: number;
 
-  constructor(pgClient: Client, workspaceId: number) {
-    this.pgClient = pgClient;
+  constructor(dbClient: PoolClient, workspaceId: number) {
+    this.dbClient = dbClient;
     this.workspaceId = workspaceId;
   }
 
   async listSequences(): Promise<any> {
     // List all sequences in the action's workspace
-    const result = await this.pgClient.query(`
+    const result = await this.dbClient.query(`
       select name, id, created_at, owner, parcel_id, updated_at, workspace_id 
         from sequencing.user_sequence
         where workspace_id = $1;
@@ -21,7 +21,7 @@ export class Actions {
   }
   async readSequence(name: string): Promise<any> {
     // Find a single sequence in the workspace by name, and read its contents
-    const result = await this.pgClient.query(`
+    const result = await this.dbClient.query(`
       select definition, seq_json, name, id, created_at, owner, parcel_id, updated_at, workspace_id
       from sequencing.user_sequence
         where name = $1 
@@ -35,13 +35,14 @@ export class Actions {
     // find a sequence by name, in the same workspace as the action
     // if it exists, overwrite its definition; else create it
     console.warn(`Write "${definition.slice(0, 50)}..." to ${name} - Not yet implemented`);
-    const result = await this.pgClient.query(`
+    const result = await this.dbClient.query(`
       WITH updated AS (
         UPDATE sequencing.user_sequence
         SET definition = $3
         WHERE name = $1 AND workspace_id = $2
         RETURNING *
       )
+      -- insert sequence if we didn't successfully update 
       INSERT INTO sequencing.user_sequence (name, workspace_id, definition, parcel_id)
       SELECT $1, $2, $3, $4
       WHERE NOT EXISTS (SELECT 1 FROM updated);
