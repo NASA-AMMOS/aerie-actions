@@ -1,6 +1,12 @@
 {
   "name": "aerie-actions",
   "version": "0.0.1",
+  "type": "module",
+  "main": "dist/helpers.js",
+  "exports": {
+    "import": "./dist/helpers.js"
+  },
+  "types": "dist/helpers.d.ts",
   "scripts": {
     "echo-debug": "echo $(pwd) && tsc --showConfig && tsc --version",
     "build": "rimraf dist && tsc",
