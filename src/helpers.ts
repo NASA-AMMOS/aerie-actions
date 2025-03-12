@@ -1,17 +1,17 @@
-import {Pool} from "pg";
+import {Client} from "pg";
 
 export class Actions {
-  pool: Pool;
+  pgClient: Client;
   workspaceId: number;
 
-  constructor(pool: Pool, workspaceId: number) {
-    this.pool = pool;
+  constructor(pgClient: Client, workspaceId: number) {
+    this.pgClient = pgClient;
     this.workspaceId = workspaceId;
   }
 
   async listSequences(): Promise<any> {
-    console.warn(`List files - Not yet implemented`);
-    const result = await this.pool.query(`
+    // List all sequences in the action's workspace
+    const result = await this.pgClient.query(`
       select name, id, created_at, owner, parcel_id, updated_at, workspace_id 
         from sequencing.user_sequence
         where workspace_id = $1;
@@ -20,7 +20,8 @@ export class Actions {
     return rows;
   }
   async readSequence(name: string): Promise<any> {
-    const result = await this.pool.query(`
+    // Find a single sequence in the workspace by name, and read its contents
+    const result = await this.pgClient.query(`
       select definition, seq_json, name, id, created_at, owner, parcel_id, updated_at, workspace_id
       from sequencing.user_sequence
         where name = $1 
@@ -31,8 +32,10 @@ export class Actions {
     return rows[0];
   }
   async writeSequence(name: string, definition: string): Promise<any> {
+    // find a sequence by name, in the same workspace as the action
+    // if it exists, overwrite its definition; else create it
     console.warn(`Write "${definition.slice(0, 50)}..." to ${name} - Not yet implemented`);
-    const result = await this.pool.query(`
+    const result = await this.pgClient.query(`
       WITH updated AS (
         UPDATE sequencing.user_sequence
         SET definition = $3
