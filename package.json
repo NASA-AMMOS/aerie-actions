@@ -4,7 +4,8 @@
   "scripts": {
     "echo-debug": "echo $(pwd) && tsc --showConfig && tsc --version",
     "build": "rimraf dist && tsc",
-    "postinstall": "npm run build"
+    "postinstall": "npm run build",
+    "format": "prettier --write ."
   },
   "author": "",
   "description": "",
