@@ -1,6 +1,6 @@
 import { PoolClient } from 'pg';
 
-export class Actions {
+export class ActionsAPI {
   dbClient: PoolClient;
   workspaceId: number;
 
@@ -13,7 +13,7 @@ export class Actions {
     // List all sequences in the action's workspace
     const result = await this.dbClient.query(
       `
-      select name, id, created_at, owner, parcel_id, updated_at, workspace_id 
+      select name, id, workspace_id, parcel_id, owner, created_at, updated_at 
         from sequencing.user_sequence
         where workspace_id = $1;
     `,
@@ -42,7 +42,6 @@ export class Actions {
   async writeSequence(name: string, definition: string): Promise<any> {
     // find a sequence by name, in the same workspace as the action
     // if it exists, overwrite its definition; else create it
-    console.warn(`Write "${definition.slice(0, 50)}..." to ${name} - Not yet implemented`);
     const result = await this.dbClient.query(
       `
       WITH updated AS (
@@ -62,6 +61,11 @@ export class Actions {
     return result;
   }
 }
+
+
+/*
+** Deprecated until we figure out how/if we should get a hasura auth token
+** (currently we only have a PG DB connection in the action context)
 
 export async function postToAerie(aerieInstanceUrl: string, endpoint: string, authToken: string): Promise<any> {
   const response = await fetch(`${aerieInstanceUrl}/${endpoint}`, {
@@ -86,3 +90,4 @@ export async function getFromAerie(aerieInstanceUrl: string, endpoint: string, a
 
   return await response.json();
 }
+*/
