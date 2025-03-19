@@ -1,6 +1,8 @@
 {
   "name": "aerie-actions",
   "version": "0.0.1",
+  "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
   "scripts": {
     "echo-debug": "echo $(pwd) && tsc --showConfig && tsc --version",
     "build": "rimraf dist && tsc",
