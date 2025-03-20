@@ -1,4 +1,13 @@
 import { PoolClient } from 'pg';
+import {
+  queryListSequences,
+  queryReadSequence,
+  queryWriteSequence,
+  ReadSequenceResult,
+  SequenceListResult,
+} from './db';
+
+export * from './types';
 
 export class ActionsAPI {
   dbClient: PoolClient;
@@ -9,59 +18,27 @@ export class ActionsAPI {
     this.workspaceId = workspaceId;
   }
 
-  async listSequences(): Promise<any> {
+  async listSequences(): Promise<SequenceListResult[]> {
     // List all sequences in the action's workspace
-    const result = await this.dbClient.query(
-      `
-      select name, id, workspace_id, parcel_id, owner, created_at, updated_at 
-        from sequencing.user_sequence
-        where workspace_id = $1;
-    `,
-      [this.workspaceId],
-    );
-    const rows = result.rows;
-    return rows;
+    const result = await queryListSequences(this.dbClient, this.workspaceId);
+    return result.rows;
   }
-  async readSequence(name: string): Promise<any> {
+  async readSequence(name: string): Promise<ReadSequenceResult> {
     // Find a single sequence in the workspace by name, and read its contents
-    const result = await this.dbClient.query(
-      `
-      select definition, seq_json, name, id, created_at, owner, parcel_id, updated_at, workspace_id
-      from sequencing.user_sequence
-        where name = $1 
-          and workspace_id = $2;
-    `,
-      [name, this.workspaceId],
-    );
+    const result = await queryReadSequence(this.dbClient, name, this.workspaceId);
     const rows = result.rows;
     if (!rows.length) {
       throw new Error(`Sequence ${name} does not exist`);
     }
     return rows[0];
   }
-  async writeSequence(name: string, definition: string): Promise<any> {
+  // todo: rethink whether or not parcelId can have a sane default value or should be required?
+  async writeSequence(name: string, definition: string, parcelId: number = 1): Promise<any> {
     // find a sequence by name, in the same workspace as the action
     // if it exists, overwrite its definition; else create it
-    const result = await this.dbClient.query(
-      `
-      WITH updated AS (
-        UPDATE sequencing.user_sequence
-        SET definition = $3
-        WHERE name = $1 AND workspace_id = $2
-        RETURNING *
-      )
-      -- insert sequence if we didn't successfully update 
-      INSERT INTO sequencing.user_sequence (name, workspace_id, definition, parcel_id)
-      SELECT $1, $2, $3, $4
-      WHERE NOT EXISTS (SELECT 1 FROM updated);
-    `,
-      [name, this.workspaceId, definition, 1],
-    );
-
-    return result;
+    return await queryWriteSequence(this.dbClient, name, this.workspaceId, definition, parcelId);
   }
 }
-
 
 /*
 ** Deprecated until we figure out how/if we should get a hasura auth token
