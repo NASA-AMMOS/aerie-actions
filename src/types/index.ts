@@ -3,10 +3,6 @@ import type { ActionsAPI } from '../index';
 // parameter/setting schema types
 export * from './schema';
 
-// Parameters and settings are user-defined
-export type ActionParameters = { [key: string]: any };
-export type ActionSettings = { [key: string]: any };
-
 export type ActionResult = {
   status: 'FAILED' | 'SUCCESS';
   data: any;
@@ -14,7 +10,8 @@ export type ActionResult = {
 };
 
 export type ActionMain = (
-  actionParameters: ActionParameters,
-  actionSettings: ActionSettings,
+  // Parameters and settings are user-defined
+  actionParameters: { [key: string]: any },
+  actionSettings: { [key: string]: any },
   actionsAPI: ActionsAPI,
 ) => Promise<ActionResult>;
