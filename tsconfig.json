@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022", // modern JavaScript target for best performance
-    "module": "ESNext", // ensures proper module handling for tree-shaking
+    "module": "commonjs", // ensures proper module handling for tree-shaking
     "moduleResolution": "node", // resolves modules like Node.js would
     "lib": ["ES2022", "dom"], // use modern built-ins
     "declaration": true, // generate `.d.ts` files for type support
