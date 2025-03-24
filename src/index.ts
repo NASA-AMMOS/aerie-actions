@@ -1,8 +1,7 @@
 import type { PoolClient, QueryResult } from 'pg';
-
 export * from './types';
 
-// types and helpers for making database queries
+// types and helpers for making DB queries
 
 // type for results of the Sequence List db query
 export type SequenceListResult = {
