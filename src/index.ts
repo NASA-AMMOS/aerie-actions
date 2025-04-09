@@ -15,17 +15,17 @@ export type SequenceListResult = {
 };
 
 export function queryListSequences(
-    dbClient: PoolClient,
-    workspaceId: number,
+  dbClient: PoolClient,
+  workspaceId: number,
 ): Promise<QueryResult<SequenceListResult>> {
   // List all sequences in the action's workspace
   return dbClient.query(
-      `
+    `
       select name, id, workspace_id, parcel_id, owner, created_at, updated_at 
         from sequencing.user_sequence
         where workspace_id = $1;
     `,
-      [workspaceId],
+    [workspaceId],
   );
 }
 
@@ -44,18 +44,18 @@ export type ReadSequenceResult = {
 };
 
 export function queryReadSequence(
-    dbClient: PoolClient,
-    name: string,
-    workspaceId: number,
+  dbClient: PoolClient,
+  name: string,
+  workspaceId: number,
 ): Promise<QueryResult<ReadSequenceResult>> {
   return dbClient.query(
-      `
+    `
       select name, id, workspace_id, parcel_id, definition, seq_json, owner, created_at, updated_at
       from sequencing.user_sequence
         where name = $1 
           and workspace_id = $2;
     `,
-      [name, workspaceId],
+    [name, workspaceId],
   );
 }
 
@@ -64,16 +64,16 @@ export function queryReadSequence(
 export type WriteSequenceResult = {};
 
 export function queryWriteSequence(
-    dbClient: PoolClient,
-    name: string,
-    workspaceId: number,
-    definition: string,
-    parcelId: number,
+  dbClient: PoolClient,
+  name: string,
+  workspaceId: number,
+  definition: string,
+  parcelId: number,
 ): Promise<QueryResult<WriteSequenceResult>> {
   // find a sequence by name, in the same workspace as the action
   // if it exists, overwrite its definition; else create it
   return dbClient.query(
-      `
+    `
       WITH updated AS (
         UPDATE sequencing.user_sequence
         SET definition = $3
@@ -85,7 +85,7 @@ export function queryWriteSequence(
       SELECT $1, $2, $3, $4
       WHERE NOT EXISTS (SELECT 1 FROM updated);
     `,
-      [name, workspaceId, definition, parcelId],
+    [name, workspaceId, definition, parcelId],
   );
 }
 
