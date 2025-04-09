@@ -26,6 +26,7 @@ export type ActionValueSchemaPath = {
 export type ActionValueSchemaSequence = {
   type: 'sequence';
 } & ActionValueSchemaMetadata;
+
 export type ActionValueSchemaSequenceList = {
   type: 'sequenceList';
 } & ActionValueSchemaMetadata;
@@ -37,6 +38,11 @@ export type ActionValueSchemaSeries = {
 
 export type ActionValueSchemaString = {
   type: 'string';
+} & ActionValueSchemaMetadata;
+
+export type ActionValueSchemaStruct = {
+  items: Record<string, ActionValueSchema>;
+  type: 'struct';
 } & ActionValueSchemaMetadata;
 
 export type Variant = {
@@ -59,6 +65,7 @@ export type ActionValueSchema =
   | ActionValueSchemaSequenceList
   | ActionValueSchemaSeries
   | ActionValueSchemaString
+  | ActionValueSchemaStruct
   | ActionValueSchemaVariant;
 
 export type ActionParameterDefinitions = Record<string, ActionValueSchema>;
@@ -84,9 +91,11 @@ type InferSchemaType<T extends ActionValueSchema> = T extends ActionValueSchemaB
                 ? string[]
                 : T extends ActionValueSchemaSeries
                   ? any[] // how to type???
-                  : T extends ActionValueSchemaVariant
-                    ? Variant // ???
-                    : never;
+                  : T extends ActionValueSchemaStruct
+                    ? object
+                    : T extends ActionValueSchemaVariant
+                      ? Variant // ???
+                      : never;
 
 // the type of the user's parameters/settings object
 export type ActionParameters<T extends ActionParameterDefinitions> = {
