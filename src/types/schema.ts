@@ -23,6 +23,14 @@ export type ActionValueSchemaPath = {
   pattern: string;
 } & ActionValueSchemaMetadata;
 
+export type ActionValueSchemaSequence = {
+  type: 'sequence';
+} & ActionValueSchemaMetadata;
+
+export type ActionValueSchemaSequenceList = {
+  type: 'sequenceList';
+} & ActionValueSchemaMetadata;
+
 export type ActionValueSchemaSeries = {
   items: ActionValueSchema;
   type: 'series';
@@ -30,6 +38,11 @@ export type ActionValueSchemaSeries = {
 
 export type ActionValueSchemaString = {
   type: 'string';
+} & ActionValueSchemaMetadata;
+
+export type ActionValueSchemaStruct = {
+  items: Record<string, ActionValueSchema>;
+  type: 'struct';
 } & ActionValueSchemaMetadata;
 
 export type Variant = {
@@ -48,8 +61,11 @@ export type ActionValueSchema =
   | ActionValueSchemaInt
   | ActionValueSchemaPath
   | ActionValueSchemaReal
+  | ActionValueSchemaSequence
+  | ActionValueSchemaSequenceList
   | ActionValueSchemaSeries
   | ActionValueSchemaString
+  | ActionValueSchemaStruct
   | ActionValueSchemaVariant;
 
 export type ActionParameterDefinitions = Record<string, ActionValueSchema>;
@@ -69,11 +85,17 @@ type InferSchemaType<T extends ActionValueSchema> = T extends ActionValueSchemaB
           ? number
           : T extends ActionValueSchemaReal
             ? number // do we need this ???
-            : T extends ActionValueSchemaSeries
-              ? any[] // how to type???
-              : T extends ActionValueSchemaVariant
-                ? Variant // ???
-                : never;
+            : T extends ActionValueSchemaSequence
+              ? string
+              : T extends ActionValueSchemaSequenceList
+                ? string[]
+                : T extends ActionValueSchemaSeries
+                  ? any[] // how to type???
+                  : T extends ActionValueSchemaStruct
+                    ? object
+                    : T extends ActionValueSchemaVariant
+                      ? Variant // ???
+                      : never;
 
 // the type of the user's parameters/settings object
 export type ActionParameters<T extends ActionParameterDefinitions> = {

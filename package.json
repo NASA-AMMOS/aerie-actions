@@ -1,5 +1,6 @@
 {
   "name": "aerie-actions",
+  "version": "0.1.1",
   "description": "Library of JS helpers used by Aerie Actions",
   "license": "MIT",
   "homepage": "https://nasa-ammos.github.io/aerie-docs/sequencing/actions/",
@@ -9,7 +10,6 @@
     "Cody Hansen <cody.m.hansen@jpl.nasa.gov>",
     "Aaron Plave <aaron.plave@jpl.nasa.gov>"
   ],
-  "version": "0.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
