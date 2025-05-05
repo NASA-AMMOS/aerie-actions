@@ -3,6 +3,39 @@ export * from './types';
 
 // types and helpers for making DB queries
 
+// type for results of the Get Sequence Activities db query
+export type SequenceActivitiesResult = {
+  activity_type_name: string;
+  attributes: object;
+  directive_id: number;
+  end_time: string;
+  start_time: string;
+}
+
+export function queryGetSequenceActivities(
+  dbClient: PoolClient,
+  sequenceName: string,
+): Promise<QueryResult<SequenceActivitiesResult>> {
+  // List all activities in a specified sequence
+  return dbClient.query(
+    `
+    select
+      activity_type_name,
+      directive_id,
+      start_time,
+      end_time
+    from merlin.simulated_activity
+    where id in (
+      select
+        simulated_activity_id
+      from sequencing.sequence_to_simulated_activity
+      where seq_id = $1
+    );
+    `,
+      [sequenceName]
+  )
+}
+
 // type for results of the Sequence List db query
 export type SequenceListResult = {
   name: string;
@@ -100,6 +133,15 @@ export class ActionsAPI {
     this.workspaceId = workspaceId;
   }
 
+  async getSequenceActivities(name: string): Promise<SequenceActivitiesResult[]> {
+    // List all the activities in a sequence
+    const result = await queryGetSequenceActivities(this.dbClient, name);
+    const rows = result.rows;
+    if (!rows.length) {
+      throw new Error(`Sequence ${name} does not exist, or is empty`);
+    }
+    return rows;
+  }
   async listSequences(): Promise<SequenceListResult[]> {
     // List all sequences in the action's workspace
     const result = await queryListSequences(this.dbClient, this.workspaceId);
