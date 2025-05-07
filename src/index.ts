@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises';
 import type { PoolClient, QueryResult } from 'pg';
-import { configuration } from './config';
 export * from './types';
 
 // types and helpers for making DB queries
@@ -139,6 +138,11 @@ export function queryWriteSequence(
   );
 }
 
+export interface Config {
+  ACTION_FILE_STORE: string;
+  SEQUENCING_FILE_STORE: string;
+}
+
 // Main API class used by the user's action
 
 export class ActionsAPI {
@@ -148,12 +152,12 @@ export class ActionsAPI {
   ACTION_FILE_STORE: string;
   SEQUENCING_FILE_STORE: string;
 
-  constructor(dbClient: PoolClient, workspaceId: number) {
+  constructor(dbClient: PoolClient, workspaceId: number, config: Config) {
     this.dbClient = dbClient;
     this.workspaceId = workspaceId;
 
-    this.ACTION_FILE_STORE = configuration().ACTION_FILE_STORE;
-    this.SEQUENCING_FILE_STORE = configuration().SEQUENCING_FILE_STORE;
+    this.ACTION_FILE_STORE = config.ACTION_FILE_STORE;
+    this.SEQUENCING_FILE_STORE = config.SEQUENCING_FILE_STORE;
   }
 
   async listSequences(): Promise<SequenceListResult[]> {
