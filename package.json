@@ -1,6 +1,6 @@
 {
   "name": "@nasa-jpl/aerie-actions",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Library of JS helpers used by Aerie Actions",
   "license": "MIT",
   "homepage": "https://nasa-ammos.github.io/aerie-docs/sequencing/actions/",
@@ -15,18 +15,18 @@
   "scripts": {
     "echo-debug": "echo $(pwd) && tsc --showConfig && tsc --version",
     "build": "rimraf dist && tsc",
-    "postinstall": "npm run build",
+    "prepublishOnly": "npm run build",
     "format": "prettier --write ."
   },
   "devDependencies": {
     "prettier": "^3.5.1",
-    "tslib": "^2.8.1"
+    "rimraf": "^6.0.1",
+    "tslib": "^2.8.1",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
     "@types/node": "^22.13.4",
-    "@types/pg": "^8.11.11",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.7.3"
+    "@types/pg": "^8.11.11"
   },
   "publishConfig": {
     "access": "public"
