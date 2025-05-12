@@ -33,7 +33,7 @@ export function queryListSequences(
 export type ReadCommandDictionaryResult = {
   id: number;
   dictionary_path: string;
-  command_dictionary_file_path: string;
+  dictionary_file_path: string;
   mission: string;
   version: number;
   parsed_json: any;
@@ -47,7 +47,7 @@ export function queryReadCommandDictionary(
 ): Promise<QueryResult<ReadCommandDictionaryResult>> {
   return dbClient.query(
     `
-      select id, dictionary_path, command_dictionary_file_path, mission, version, parsed_json, created_at, updated_at
+      select id, dictionary_path, dictionary_file_path, mission, version, parsed_json, created_at, updated_at
       from sequencing.command_dictionary
         where id = $1;
     `,
