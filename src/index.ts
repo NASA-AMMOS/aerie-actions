@@ -30,7 +30,7 @@ export function queryListSequences(
   );
 }
 
-export type ReadCommandDictionaryResult = {
+export type ReadDictionaryResult = {
   id: number;
   dictionary_path: string;
   dictionary_file_path: string;
@@ -41,18 +41,33 @@ export type ReadCommandDictionaryResult = {
   updated_at: string;
 };
 
+function dictionaryQuery(tableName: 'channel_dictionary' | 'command_dictionary' | 'parameter_dictionary'): string {
+  return `
+    select id, dictionary_path, dictionary_file_path, mission, version, parsed_json, created_at, updated_at
+    from sequencing.${tableName}
+      where id = $1;
+  `;
+}
+
+export function queryReadChannelDictionary(
+  dbClient: PoolClient,
+  id: number,
+): Promise<QueryResult<ReadDictionaryResult>> {
+  return dbClient.query(dictionaryQuery('channel_dictionary'), [id]);
+}
+
 export function queryReadCommandDictionary(
   dbClient: PoolClient,
   id: number,
-): Promise<QueryResult<ReadCommandDictionaryResult>> {
-  return dbClient.query(
-    `
-      select id, dictionary_path, dictionary_file_path, mission, version, parsed_json, created_at, updated_at
-      from sequencing.command_dictionary
-        where id = $1;
-    `,
-    [id],
-  );
+): Promise<QueryResult<ReadDictionaryResult>> {
+  return dbClient.query(dictionaryQuery('command_dictionary'), [id]);
+}
+
+export function queryReadParameterDictionary(
+  dbClient: PoolClient,
+  id: number,
+): Promise<QueryResult<ReadDictionaryResult>> {
+  return dbClient.query(dictionaryQuery('command_dictionary'), [id]);
 }
 
 export type ReadParcelResult = {
@@ -166,7 +181,18 @@ export class ActionsAPI {
     return result.rows;
   }
 
-  async readCommandDictionary(id: number): Promise<ReadCommandDictionaryResult> {
+  async readChannelDictionary(id: number): Promise<ReadDictionaryResult> {
+    const result = await queryReadChannelDictionary(this.dbClient, id);
+    const rows = result.rows;
+
+    if (!rows.length) {
+      throw new Error(`Channel Dictionary with id: ${id} does not exist`);
+    }
+
+    return rows[0];
+  }
+
+  async readCommandDictionary(id: number): Promise<ReadDictionaryResult> {
     const result = await queryReadCommandDictionary(this.dbClient, id);
     const rows = result.rows;
 
@@ -177,7 +203,18 @@ export class ActionsAPI {
     return rows[0];
   }
 
-  async readCommandDictionaryFile(filePath: string): Promise<string> {
+  async readParameterDictionary(id: number): Promise<ReadDictionaryResult> {
+    const result = await queryReadParameterDictionary(this.dbClient, id);
+    const rows = result.rows;
+
+    if (!rows.length) {
+      throw new Error(`Parameter Dictionary with id: ${id} does not exist`);
+    }
+
+    return rows[0];
+  }
+
+  async readDictionaryFile(filePath: string): Promise<string> {
     return await readFile(`${filePath.replace(this.SEQUENCING_FILE_STORE, this.ACTION_FILE_STORE)}`, 'utf-8');
   }
 
