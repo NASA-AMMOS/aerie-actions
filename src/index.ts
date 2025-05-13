@@ -67,7 +67,7 @@ export function queryReadParameterDictionary(
   dbClient: PoolClient,
   id: number,
 ): Promise<QueryResult<ReadDictionaryResult>> {
-  return dbClient.query(dictionaryQuery('command_dictionary'), [id]);
+  return dbClient.query(dictionaryQuery('parameter_dictionary'), [id]);
 }
 
 export type ReadParcelResult = {
