@@ -1,24 +1,18 @@
 import { readFile } from 'node:fs/promises';
 import type { PoolClient, QueryResult } from 'pg';
+import {
+  ReadDictionaryResult,
+  ReadSequenceResult,
+  ReadSequenceListResult,
+  WriteSequenceResult,
+  ReadParcelResult,
+} from './types/db-types';
 export * from './types';
-
-// types and helpers for making DB queries
-
-// type for results of the Sequence List db query
-export type SequenceListResult = {
-  name: string;
-  id: number;
-  workspace_id: number;
-  parcel_id: number;
-  owner?: string;
-  created_at: string;
-  updated_at: string;
-};
 
 export function queryListSequences(
   dbClient: PoolClient,
   workspaceId: number,
-): Promise<QueryResult<SequenceListResult>> {
+): Promise<QueryResult<ReadSequenceListResult>> {
   // List all sequences in the action's workspace
   return dbClient.query(
     `
@@ -29,17 +23,6 @@ export function queryListSequences(
     [workspaceId],
   );
 }
-
-export type ReadDictionaryResult = {
-  id: number;
-  dictionary_path: string;
-  dictionary_file_path: string;
-  mission: string;
-  version: number;
-  parsed_json: any;
-  created_at: string;
-  updated_at: string;
-};
 
 function dictionaryQuery(tableName: 'channel_dictionary' | 'command_dictionary' | 'parameter_dictionary'): string {
   return `
@@ -70,18 +53,6 @@ export function queryReadParameterDictionary(
   return dbClient.query(dictionaryQuery('parameter_dictionary'), [id]);
 }
 
-export type ReadParcelResult = {
-  id: number;
-  name: string;
-  command_dictionary_id: number;
-  channel_dictionary_id: number;
-  sequence_adaptation_id: number;
-  created_at: string;
-  owner?: string;
-  updated_at: string;
-  updated_by: string;
-};
-
 export function queryReadParcel(dbClient: PoolClient, id: number): Promise<QueryResult<ReadParcelResult>> {
   return dbClient.query(
     `
@@ -95,17 +66,6 @@ export function queryReadParcel(dbClient: PoolClient, id: number): Promise<Query
 
 // ---
 // type for results of the Read Sequence db query
-export type ReadSequenceResult = {
-  name: string;
-  id: number;
-  workspace_id: number;
-  parcel_id: number;
-  definition: string;
-  seq_json?: string;
-  owner?: string;
-  created_at: string;
-  updated_at: string;
-};
 
 export function queryReadSequence(
   dbClient: PoolClient,
@@ -122,10 +82,6 @@ export function queryReadSequence(
     [name, workspaceId],
   );
 }
-
-// ---
-// type for results of the Read Sequence db query
-export type WriteSequenceResult = {};
 
 export function queryWriteSequence(
   dbClient: PoolClient,
@@ -175,7 +131,7 @@ export class ActionsAPI {
     this.SEQUENCING_FILE_STORE = config.SEQUENCING_FILE_STORE;
   }
 
-  async listSequences(): Promise<SequenceListResult[]> {
+  async listSequences(): Promise<ReadSequenceListResult[]> {
     // List all sequences in the action's workspace
     const result = await queryListSequences(this.dbClient, this.workspaceId);
     return result.rows;
