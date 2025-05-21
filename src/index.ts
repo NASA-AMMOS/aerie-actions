@@ -7,8 +7,17 @@ import {
   WriteSequenceResult,
   ReadParcelResult,
 } from './types/db-types';
+import { dictionaryQuery, queryReadParcel } from './helpers/db-helpers';
+import { Config } from './types';
 export * from './types';
 
+/**
+ * Reads a list of sequences for a given `workspaceId`.
+ *
+ * @param dbClient - A client that is part of our connection pool.
+ * @param workspaceId - The id of the workspace the sequence is a part of.
+ * @returns {@link ReadSequenceListResult}
+ */
 export function queryListSequences(
   dbClient: PoolClient,
   workspaceId: number,
@@ -24,14 +33,13 @@ export function queryListSequences(
   );
 }
 
-function dictionaryQuery(tableName: 'channel_dictionary' | 'command_dictionary' | 'parameter_dictionary'): string {
-  return `
-    select id, dictionary_path, dictionary_file_path, mission, version, parsed_json, created_at, updated_at
-    from sequencing.${tableName}
-      where id = $1;
-  `;
-}
-
+/**
+ * Reads a Channel Dictionary for a given `id`.
+ *
+ * @param dbClient - A client that is part of our connection pool.
+ * @param id - The id of the Channel Dictionary.
+ * @returns {@link ReadDictionaryResult}
+ */
 export function queryReadChannelDictionary(
   dbClient: PoolClient,
   id: number,
@@ -39,6 +47,13 @@ export function queryReadChannelDictionary(
   return dbClient.query(dictionaryQuery('channel_dictionary'), [id]);
 }
 
+/**
+ * Reads a Command Dictionary for a given `id`.
+ *
+ * @param dbClient - A client that is part of our connection pool.
+ * @param id - The id of the Command Dictionary.
+ * @returns {@link ReadDictionaryResult}
+ */
 export function queryReadCommandDictionary(
   dbClient: PoolClient,
   id: number,
@@ -46,6 +61,13 @@ export function queryReadCommandDictionary(
   return dbClient.query(dictionaryQuery('command_dictionary'), [id]);
 }
 
+/**
+ * Reads a Parameter Dictionary for a given `id`.
+ *
+ * @param dbClient - A client that is part of our connection pool.
+ * @param id - The id of the Parameter Dictionary.
+ * @returns {@link ReadDictionaryResult}
+ */
 export function queryReadParameterDictionary(
   dbClient: PoolClient,
   id: number,
@@ -53,20 +75,14 @@ export function queryReadParameterDictionary(
   return dbClient.query(dictionaryQuery('parameter_dictionary'), [id]);
 }
 
-export function queryReadParcel(dbClient: PoolClient, id: number): Promise<QueryResult<ReadParcelResult>> {
-  return dbClient.query(
-    `
-      select name, id, command_dictionary_id, channel_dictionary_id, sequence_adaptation_id, created_at, owner, updated_at, updated_by
-      from sequencing.parcel
-        where id = $1;
-    `,
-    [id],
-  );
-}
-
-// ---
-// type for results of the Read Sequence db query
-
+/**
+ * Reads a Sequence for a given `name` and `workspaceId`.
+ *
+ * @param dbClient - A client that is part of our connection pool.
+ * @param name - The name of the Sequence.
+ * @param workspaceId - The id of the Workspace that the Sequence is a part of.
+ * @returns {@link ReadSequenceResult}
+ */
 export function queryReadSequence(
   dbClient: PoolClient,
   name: string,
@@ -83,6 +99,17 @@ export function queryReadSequence(
   );
 }
 
+/**
+ * Find a Sequence by name in the same Workspace that the Action is running in, if it exists
+ * overwrite its definition otherwise create it.
+ *
+ * @param dbClient - A client that is part of our connection pool.
+ * @param name - The name of the Sequence.
+ * @param workspaceId - The id of the Workspace that the Sequence is a part of.
+ * @param definition - The definition of the Sequence.
+ * @param parcelId - The id of the Parcel that the Sequence was written with.
+ * @returns {@link WriteSequenceResult}
+ */
 export function queryWriteSequence(
   dbClient: PoolClient,
   name: string,
@@ -90,8 +117,6 @@ export function queryWriteSequence(
   definition: string,
   parcelId: number,
 ): Promise<QueryResult<WriteSequenceResult>> {
-  // find a sequence by name, in the same workspace as the action
-  // if it exists, overwrite its definition; else create it
   return dbClient.query(
     `
       WITH updated AS (
@@ -109,13 +134,7 @@ export function queryWriteSequence(
   );
 }
 
-export interface Config {
-  ACTION_FILE_STORE: string;
-  SEQUENCING_FILE_STORE: string;
-}
-
 // Main API class used by the user's action
-
 export class ActionsAPI {
   dbClient: PoolClient;
   workspaceId: number;
@@ -123,6 +142,13 @@ export class ActionsAPI {
   ACTION_FILE_STORE: string;
   SEQUENCING_FILE_STORE: string;
 
+  /**
+   *
+   * @param dbClient - A client that is part of our connection pool.
+   * @param workspaceId - The id of the Workspace the Action is associated with.
+   * @param config - {@link Config} A config containing an `ACTION_FILE_STORE` and `SEQUENCING_FILE_STORE` so the action
+   * can read files.
+   */
   constructor(dbClient: PoolClient, workspaceId: number, config: Config) {
     this.dbClient = dbClient;
     this.workspaceId = workspaceId;
@@ -131,12 +157,22 @@ export class ActionsAPI {
     this.SEQUENCING_FILE_STORE = config.SEQUENCING_FILE_STORE;
   }
 
+  /**
+   * Lists all the Sequences in the Action's Workspace.
+   *
+   * @returns - {@link ReadSequenceListResult}
+   */
   async listSequences(): Promise<ReadSequenceListResult[]> {
-    // List all sequences in the action's workspace
     const result = await queryListSequences(this.dbClient, this.workspaceId);
     return result.rows;
   }
 
+  /**
+   * Reads a Channel Dictionary from the database.
+   *
+   * @param id - The id of the Channel Dictionary.
+   * @returns {@link ReadDictionaryResult}
+   */
   async readChannelDictionary(id: number): Promise<ReadDictionaryResult> {
     const result = await queryReadChannelDictionary(this.dbClient, id);
     const rows = result.rows;
@@ -148,6 +184,12 @@ export class ActionsAPI {
     return rows[0];
   }
 
+  /**
+   * Reads a Command Dictionary from the database.
+   *
+   * @param id - The id of the Command Dictionary.
+   * @returns {@link ReadDictionaryResult}
+   */
   async readCommandDictionary(id: number): Promise<ReadDictionaryResult> {
     const result = await queryReadCommandDictionary(this.dbClient, id);
     const rows = result.rows;
@@ -159,6 +201,12 @@ export class ActionsAPI {
     return rows[0];
   }
 
+  /**
+   * Reads a Parameter Dictionary from the database.
+   *
+   * @param id - The id of the Parameter Dictionary.
+   * @returns {@link ReadDictionaryResult}
+   */
   async readParameterDictionary(id: number): Promise<ReadDictionaryResult> {
     const result = await queryReadParameterDictionary(this.dbClient, id);
     const rows = result.rows;
@@ -170,10 +218,23 @@ export class ActionsAPI {
     return rows[0];
   }
 
+  /**
+   * Reads the file contents from file given a path to that file. The path is sanitized so the requester cannot
+   * look outside of the file store.
+   *
+   * @param filePath - The path to the file.
+   * @returns The file contents as a string.
+   */
   async readDictionaryFile(filePath: string): Promise<string> {
     return await readFile(`${filePath.replace(this.SEQUENCING_FILE_STORE, this.ACTION_FILE_STORE)}`, 'utf-8');
   }
 
+  /**
+   * Reads a Parcel for a given id.
+   *
+   * @param id - The id of the Parcel.
+   * @returns {@link ReadParcelResult}
+   */
   async readParcel(id: number): Promise<ReadParcelResult> {
     const result = await queryReadParcel(this.dbClient, id);
     const rows = result.rows;
@@ -185,20 +246,33 @@ export class ActionsAPI {
     return rows[0];
   }
 
+  /**
+   * Reads a Sequence for a given Sequence name.
+   *
+   * @param name - The name of the Sequence.
+   * @returns {@link ReadSequenceResult}
+   */
   async readSequence(name: string): Promise<ReadSequenceResult> {
-    // Find a single sequence in the workspace by name, and read its contents
     const result = await queryReadSequence(this.dbClient, name, this.workspaceId);
     const rows = result.rows;
+
     if (!rows.length) {
       throw new Error(`Sequence ${name} does not exist`);
     }
     return rows[0];
   }
 
-  // TODO: rethink whether or not parcelId can have a sane default value or should be required?
+  /**
+   * Find a Sequence by name in the same Workspace as the Action, if it exists overwrite its definition otherwise
+   * create it.
+   *
+   * @param name - The name of the Sequence.
+   * @param definition - The new definition of the Sequence.
+   * @param parcelId - The Parcel id of the sequence, @defaultValue `1`.
+   * @returns
+   */
   async writeSequence(name: string, definition: string, parcelId: number = 1): Promise<any> {
-    // find a sequence by name, in the same workspace as the action
-    // if it exists, overwrite its definition; else create it
+    // TODO: rethink whether or not parcelId can have a sane default value or should be required?
     return await queryWriteSequence(this.dbClient, name, this.workspaceId, definition, parcelId);
   }
 }
