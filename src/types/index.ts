@@ -15,3 +15,8 @@ export type ActionMain = (
   actionSettings: { [key: string]: any },
   actionsAPI: ActionsAPI,
 ) => Promise<ActionResult>;
+
+export interface Config {
+  ACTION_FILE_STORE: string;
+  SEQUENCING_FILE_STORE: string;
+}
