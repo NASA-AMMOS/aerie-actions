@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import type { PoolClient, QueryResult } from 'pg';
+import { ENVIRONMENT_VARIABLE_PREFIX } from './consts';
 export * from './types';
 
 // types and helpers for making DB queries
@@ -173,6 +174,20 @@ export class ActionsAPI {
 
     this.ACTION_FILE_STORE = config.ACTION_FILE_STORE;
     this.SEQUENCING_FILE_STORE = config.SEQUENCING_FILE_STORE;
+  }
+
+  /**
+   * Finds an environment variable by name if it is prefixed with `PUBLIC_ACTION_`.
+   *
+   * @param name The name of the environment variable.
+   * @returns The value of the environment variable if it was found, otherwise undefined.
+   */
+  getEnvironmentVariable(name: string): string | undefined {
+    if (name.startsWith(ENVIRONMENT_VARIABLE_PREFIX)) {
+      return process.env[name];
+    }
+
+    return undefined;
   }
 
   async listSequences(): Promise<SequenceListResult[]> {
