@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises';
 import type { PoolClient, QueryResult } from 'pg';
-import { ENVIRONMENT_VARIABLE_PREFIX } from './consts';
 export * from './types';
 
 // types and helpers for making DB queries
@@ -168,6 +167,8 @@ export class ActionsAPI {
   ACTION_FILE_STORE: string;
   SEQUENCING_FILE_STORE: string;
 
+  static ENVIRONMENT_VARIABLE_PREFIX = 'PUBLIC_ACTION_';
+
   constructor(dbClient: PoolClient, workspaceId: number, config: Config) {
     this.dbClient = dbClient;
     this.workspaceId = workspaceId;
@@ -183,8 +184,12 @@ export class ActionsAPI {
    * @returns The value of the environment variable if it was found, otherwise undefined.
    */
   getEnvironmentVariable(name: string): string | undefined {
-    if (name.startsWith(ENVIRONMENT_VARIABLE_PREFIX)) {
+    if (name.startsWith(ActionsAPI.ENVIRONMENT_VARIABLE_PREFIX)) {
       return process.env[name];
+    } else {
+      console.warn(
+        `Only environment variables with the prefix: ${ActionsAPI.ENVIRONMENT_VARIABLE_PREFIX} can be accessed from within an action.`,
+      );
     }
 
     return undefined;
