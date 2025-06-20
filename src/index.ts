@@ -16,7 +16,7 @@ export * from './types';
  *
  * @param dbClient - A client that is part of our connection pool.
  * @param workspaceId - The id of the workspace the sequence is a part of.
- * @returns {@link ReadSequenceListResult}
+ * @returns The list of sequences in the workspace (without their contents)
  */
 export function queryListSequences(
   dbClient: PoolClient,
@@ -38,7 +38,7 @@ export function queryListSequences(
  *
  * @param dbClient - A client that is part of our connection pool.
  * @param id - The id of the Channel Dictionary.
- * @returns {@link ReadDictionaryResult}
+ * @returns The Channel Dictionary with the given ID
  */
 export function queryReadChannelDictionary(
   dbClient: PoolClient,
@@ -52,7 +52,7 @@ export function queryReadChannelDictionary(
  *
  * @param dbClient - A client that is part of our connection pool.
  * @param id - The id of the Command Dictionary.
- * @returns {@link ReadDictionaryResult}
+ * @returns The Command Dictionary with the given ID
  */
 export function queryReadCommandDictionary(
   dbClient: PoolClient,
@@ -66,7 +66,7 @@ export function queryReadCommandDictionary(
  *
  * @param dbClient - A client that is part of our connection pool.
  * @param id - The id of the Parameter Dictionary.
- * @returns {@link ReadDictionaryResult}
+ * @returns The Parameter Dictionary with the given ID
  */
 export function queryReadParameterDictionary(
   dbClient: PoolClient,
@@ -81,7 +81,7 @@ export function queryReadParameterDictionary(
  * @param dbClient - A client that is part of our connection pool.
  * @param name - The name of the Sequence.
  * @param workspaceId - The id of the Workspace that the Sequence is a part of.
- * @returns {@link ReadSequenceResult}
+ * @returns The requested Sequence (including contents)
  */
 export function queryReadSequence(
   dbClient: PoolClient,
@@ -108,7 +108,7 @@ export function queryReadSequence(
  * @param workspaceId - The id of the Workspace that the Sequence is a part of.
  * @param definition - The definition of the Sequence.
  * @param parcelId - The id of the Parcel that the Sequence was written with.
- * @returns {@link WriteSequenceResult}
+ * @returns The result of the attempt to write the sequence
  */
 export function queryWriteSequence(
   dbClient: PoolClient,
@@ -146,7 +146,7 @@ export class ActionsAPI {
    *
    * @param dbClient - A client that is part of our connection pool.
    * @param workspaceId - The id of the Workspace the Action is associated with.
-   * @param config - {@link Config} A config containing an `ACTION_FILE_STORE` and `SEQUENCING_FILE_STORE` so the action
+   * @param config - A config containing an `ACTION_FILE_STORE` and `SEQUENCING_FILE_STORE` so the action
    * can read files.
    */
   constructor(dbClient: PoolClient, workspaceId: number, config: Config) {
@@ -160,7 +160,7 @@ export class ActionsAPI {
   /**
    * Lists all the Sequences in the Action's Workspace.
    *
-   * @returns - {@link ReadSequenceListResult}
+   * @returns - The list of sequences in the workspace (without their contents)
    */
   async listSequences(): Promise<ReadSequenceListResult[]> {
     const result = await queryListSequences(this.dbClient, this.workspaceId);
@@ -171,7 +171,7 @@ export class ActionsAPI {
    * Reads a Channel Dictionary from the database.
    *
    * @param id - The id of the Channel Dictionary.
-   * @returns {@link ReadDictionaryResult}
+   * @returns The Channel Dictionary with the given ID
    */
   async readChannelDictionary(id: number): Promise<ReadDictionaryResult> {
     const result = await queryReadChannelDictionary(this.dbClient, id);
@@ -188,7 +188,7 @@ export class ActionsAPI {
    * Reads a Command Dictionary from the database.
    *
    * @param id - The id of the Command Dictionary.
-   * @returns {@link ReadDictionaryResult}
+   * @returns The Command Dictionary with the given ID
    */
   async readCommandDictionary(id: number): Promise<ReadDictionaryResult> {
     const result = await queryReadCommandDictionary(this.dbClient, id);
@@ -205,7 +205,7 @@ export class ActionsAPI {
    * Reads a Parameter Dictionary from the database.
    *
    * @param id - The id of the Parameter Dictionary.
-   * @returns {@link ReadDictionaryResult}
+   * @returns The Parameter Dictionary with the given ID
    */
   async readParameterDictionary(id: number): Promise<ReadDictionaryResult> {
     const result = await queryReadParameterDictionary(this.dbClient, id);
@@ -233,7 +233,7 @@ export class ActionsAPI {
    * Reads a Parcel for a given id.
    *
    * @param id - The id of the Parcel.
-   * @returns {@link ReadParcelResult}
+   * @returns The parcel detail, including ids for dictionaries it contains
    */
   async readParcel(id: number): Promise<ReadParcelResult> {
     const result = await queryReadParcel(this.dbClient, id);
@@ -250,7 +250,7 @@ export class ActionsAPI {
    * Reads a Sequence for a given Sequence name.
    *
    * @param name - The name of the Sequence.
-   * @returns {@link ReadSequenceResult}
+   * @returns The requested Sequence (including contents)
    */
   async readSequence(name: string): Promise<ReadSequenceResult> {
     const result = await queryReadSequence(this.dbClient, name, this.workspaceId);
@@ -269,7 +269,7 @@ export class ActionsAPI {
    * @param name - The name of the Sequence.
    * @param definition - The new definition of the Sequence.
    * @param parcelId - The Parcel id of the sequence, @defaultValue `1`.
-   * @returns
+   * @returns The result of the attempt to write the sequence
    */
   async writeSequence(name: string, definition: string, parcelId: number = 1): Promise<any> {
     // TODO: rethink whether or not parcelId can have a sane default value or should be required?
