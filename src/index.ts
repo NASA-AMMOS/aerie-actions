@@ -142,6 +142,8 @@ export class ActionsAPI {
   ACTION_FILE_STORE: string;
   SEQUENCING_FILE_STORE: string;
 
+  static ENVIRONMENT_VARIABLE_PREFIX = 'PUBLIC_ACTION_';
+
   /**
    *
    * @param dbClient - A client that is part of our connection pool.
@@ -155,6 +157,24 @@ export class ActionsAPI {
 
     this.ACTION_FILE_STORE = config.ACTION_FILE_STORE;
     this.SEQUENCING_FILE_STORE = config.SEQUENCING_FILE_STORE;
+  }
+
+  /**
+   * Finds an environment variable by name if it is prefixed with `PUBLIC_ACTION_`.
+   *
+   * @param name The name of the environment variable.
+   * @returns The value of the environment variable if it was found, otherwise undefined.
+   */
+  getEnvironmentVariable(name: string): string | undefined {
+    if (name.startsWith(ActionsAPI.ENVIRONMENT_VARIABLE_PREFIX)) {
+      return process.env[name];
+    } else {
+      console.warn(
+        `Only environment variables with the prefix: ${ActionsAPI.ENVIRONMENT_VARIABLE_PREFIX} can be accessed from within an action.`,
+      );
+    }
+
+    return undefined;
   }
 
   /**
