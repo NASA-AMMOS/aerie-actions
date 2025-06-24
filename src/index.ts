@@ -134,6 +134,12 @@ export function queryWriteSequence(
   );
 }
 
+export interface Config {
+  ACTION_FILE_STORE: string;
+  SEQUENCING_FILE_STORE: string;
+  SECRETS?: Record<string, string>;
+}
+
 // Main API class used by the user's action
 export class ActionsAPI {
   dbClient: PoolClient;
@@ -141,6 +147,7 @@ export class ActionsAPI {
 
   ACTION_FILE_STORE: string;
   SEQUENCING_FILE_STORE: string;
+  SECRETS: Record<string, string> | undefined;
 
   static ENVIRONMENT_VARIABLE_PREFIX = 'PUBLIC_ACTION_';
 
@@ -157,6 +164,7 @@ export class ActionsAPI {
 
     this.ACTION_FILE_STORE = config.ACTION_FILE_STORE;
     this.SEQUENCING_FILE_STORE = config.SEQUENCING_FILE_STORE;
+    this.SECRETS = config.SECRETS;
   }
 
   /**
