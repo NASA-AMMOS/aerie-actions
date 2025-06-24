@@ -31,6 +31,10 @@ export type ActionValueSchemaSequenceList = {
   type: 'sequenceList';
 } & ActionValueSchemaMetadata;
 
+export type ActionValueSchemaSecret = {
+  type: 'secret';
+} & ActionValueSchemaMetadata;
+
 export type ActionValueSchemaSeries = {
   items: ActionValueSchema;
   type: 'series';
@@ -63,6 +67,7 @@ export type ActionValueSchema =
   | ActionValueSchemaReal
   | ActionValueSchemaSequence
   | ActionValueSchemaSequenceList
+  | ActionValueSchemaSecret
   | ActionValueSchemaSeries
   | ActionValueSchemaString
   | ActionValueSchemaStruct
