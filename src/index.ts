@@ -144,10 +144,7 @@ export interface Config {
 export class ActionsAPI {
   dbClient: PoolClient;
   workspaceId: number;
-
-  ACTION_FILE_STORE: string;
-  SEQUENCING_FILE_STORE: string;
-  SECRETS: Record<string, string> | undefined;
+  config: Config;
 
   static ENVIRONMENT_VARIABLE_PREFIX = 'PUBLIC_ACTION_';
 
@@ -161,10 +158,7 @@ export class ActionsAPI {
   constructor(dbClient: PoolClient, workspaceId: number, config: Config) {
     this.dbClient = dbClient;
     this.workspaceId = workspaceId;
-
-    this.ACTION_FILE_STORE = config.ACTION_FILE_STORE;
-    this.SEQUENCING_FILE_STORE = config.SEQUENCING_FILE_STORE;
-    this.SECRETS = config.SECRETS;
+    this.config = config;
   }
 
   /**
@@ -254,7 +248,10 @@ export class ActionsAPI {
    * @returns The file contents as a string.
    */
   async readDictionaryFile(filePath: string): Promise<string> {
-    return await readFile(`${filePath.replace(this.SEQUENCING_FILE_STORE, this.ACTION_FILE_STORE)}`, 'utf-8');
+    return await readFile(
+      `${filePath.replace(this.config.SEQUENCING_FILE_STORE, this.config.ACTION_FILE_STORE)}`,
+      'utf-8',
+    );
   }
 
   /**
