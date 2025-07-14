@@ -8,7 +8,7 @@ import {
   ReadParcelResult,
 } from './types/db-types';
 import { dictionaryQuery, queryReadParcel } from './helpers/db-helpers';
-import { Config } from './types';
+import { ActionsConfig } from './types';
 export * from './types';
 
 /**
@@ -134,17 +134,11 @@ export function queryWriteSequence(
   );
 }
 
-export interface Config {
-  ACTION_FILE_STORE: string;
-  SEQUENCING_FILE_STORE: string;
-  SECRETS?: Record<string, string>;
-}
-
 // Main API class used by the user's action
 export class ActionsAPI {
   dbClient: PoolClient;
   workspaceId: number;
-  config: Config;
+  config: ActionsConfig;
 
   static ENVIRONMENT_VARIABLE_PREFIX = 'PUBLIC_ACTION_';
 
@@ -155,7 +149,7 @@ export class ActionsAPI {
    * @param config - A config containing an `ACTION_FILE_STORE` and `SEQUENCING_FILE_STORE` so the action
    * can read files.
    */
-  constructor(dbClient: PoolClient, workspaceId: number, config: Config) {
+  constructor(dbClient: PoolClient, workspaceId: number, config: ActionsConfig) {
     this.dbClient = dbClient;
     this.workspaceId = workspaceId;
     this.config = config;
