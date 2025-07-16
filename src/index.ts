@@ -79,7 +79,7 @@ export function queryReadParameterDictionary(
 // Main API class used by the user's action
 export class ActionsAPI {
   config: ActionsConfig;
-  dbClient?: PoolClient;
+  dbClient: PoolClient;
   user: User | null;
   workspaceId: number;
 
@@ -174,20 +174,14 @@ export class ActionsAPI {
       body: requestBody,
     };
 
+    const response = await fetch(`${this.WORKSPACE_BASE_URL}${path}`, options);
+    const text = await response.text();
 
-    try {
-      const response = await fetch(`${this.WORKSPACE_BASE_URL}${path}`, options);
-      const text = await response.text();
-
-      if (!response.ok) {
-        throw new Error(`${response.status} - ${text}`);
-      }
-
-      return asJson ? JSON.parse(text) : (text as T);
-    } catch (e) {
-      console.error("Fetch error:", e);
-      throw e;
+    if (!response.ok) {
+      throw new Error(`${response.status} - ${text}`);
     }
+
+    return asJson ? JSON.parse(text) : (text as T);
   }
 
 
@@ -240,20 +234,20 @@ export class ActionsAPI {
    * Write a file with the given name and definition to the workspace filesystem.
    * @param name - Full path of the file from the workspace root. This functions like mkdir -p; if parent folders
    * do not exist, they will be created.
-   * @param definition - The contents of the file to be written.
+   * @param contents - The contents of the file to be written.
    * @param overwrite - If the file already exists, overwrite its contents.
    */
   async writeFile(
     name: string,
-    definition: string,
-    overwrite: boolean
+    contents: string,
+    overwrite: boolean = false
   ): Promise<any> {
     if (this.WORKSPACE_BASE_URL) {
       // Example: PUT /ws/:workspaceId/:name
 
       try {
         const formData = new FormData();
-        formData.append("file", new Blob([definition]), name);
+        formData.append("file", new Blob([contents]), name);
         const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=file&overwrite=${overwrite}`;
 
         await this.reqWorkspace(
@@ -333,7 +327,7 @@ export class ActionsAPI {
 
 
   async readChannelDictionary(id: number): Promise<ReadDictionaryResult> {
-    const result = await queryReadChannelDictionary(this.dbClient!, id);
+    const result = await queryReadChannelDictionary(this.dbClient, id);
     const rows = result.rows;
 
     if (!rows.length) {
@@ -350,7 +344,7 @@ export class ActionsAPI {
    * @returns The Command Dictionary with the given ID
    */
   async readCommandDictionary(id: number): Promise<ReadDictionaryResult> {
-    const result = await queryReadCommandDictionary(this.dbClient!, id);
+    const result = await queryReadCommandDictionary(this.dbClient, id);
     const rows = result.rows;
 
     if (!rows.length) {
@@ -367,7 +361,7 @@ export class ActionsAPI {
    * @returns The Parameter Dictionary with the given ID
    */
   async readParameterDictionary(id: number): Promise<ReadDictionaryResult> {
-    const result = await queryReadParameterDictionary(this.dbClient!, id);
+    const result = await queryReadParameterDictionary(this.dbClient, id);
     const rows = result.rows;
 
     if (!rows.length) {
