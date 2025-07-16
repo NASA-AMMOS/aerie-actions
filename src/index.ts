@@ -101,6 +101,7 @@ export class ActionsAPI {
     this.dbClient = dbClient;
     this.workspaceId = workspaceId;
     this.user = user;
+    this.config = config;
 
     this.ACTION_FILE_STORE = config.ACTION_FILE_STORE;
     this.SEQUENCING_FILE_STORE = config.SEQUENCING_FILE_STORE;
