@@ -8,7 +8,7 @@ import {
   ReadParcelResult,
 } from './types/db-types';
 import { dictionaryQuery, queryReadParcel } from './helpers/db-helpers';
-import { Config } from './types';
+import { ActionsConfig } from './types';
 export * from './types';
 
 /**
@@ -138,9 +138,7 @@ export function queryWriteSequence(
 export class ActionsAPI {
   dbClient: PoolClient;
   workspaceId: number;
-
-  ACTION_FILE_STORE: string;
-  SEQUENCING_FILE_STORE: string;
+  config: ActionsConfig;
 
   static ENVIRONMENT_VARIABLE_PREFIX = 'PUBLIC_ACTION_';
 
@@ -151,12 +149,10 @@ export class ActionsAPI {
    * @param config - A config containing an `ACTION_FILE_STORE` and `SEQUENCING_FILE_STORE` so the action
    * can read files.
    */
-  constructor(dbClient: PoolClient, workspaceId: number, config: Config) {
+  constructor(dbClient: PoolClient, workspaceId: number, config: ActionsConfig) {
     this.dbClient = dbClient;
     this.workspaceId = workspaceId;
-
-    this.ACTION_FILE_STORE = config.ACTION_FILE_STORE;
-    this.SEQUENCING_FILE_STORE = config.SEQUENCING_FILE_STORE;
+    this.config = config;
   }
 
   /**
@@ -246,7 +242,10 @@ export class ActionsAPI {
    * @returns The file contents as a string.
    */
   async readDictionaryFile(filePath: string): Promise<string> {
-    return await readFile(`${filePath.replace(this.SEQUENCING_FILE_STORE, this.ACTION_FILE_STORE)}`, 'utf-8');
+    return await readFile(
+      `${filePath.replace(this.config.SEQUENCING_FILE_STORE, this.config.ACTION_FILE_STORE)}`,
+      'utf-8',
+    );
   }
 
   /**
