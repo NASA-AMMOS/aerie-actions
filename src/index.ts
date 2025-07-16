@@ -343,6 +343,28 @@ export class ActionsAPI {
     }
   }
 
+  async copyFile(
+    source: string,
+    dest: string
+  ): Promise<any> {
+    if (this.WORKSPACE_BASE_URL) {
+      try {
+        const path = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+        await this.reqWorkspace(
+          path,
+          'POST',
+          {"copyTo": dest},
+          false
+        );
+        return { success: true };
+      } catch (e) {
+        throw new Error(`Failed to copy file '${source}' to '${dest}': ${(e as Error).message}`);
+      }
+    } else {
+      throw new Error('No backend configured to copy file');
+    }
+  }
+
   async createDirectory(
     name: string,
     overwrite: boolean

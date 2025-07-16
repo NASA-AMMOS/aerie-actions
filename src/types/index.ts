@@ -29,5 +29,6 @@ export type User = {
 export type ActionsConfig = {
   ACTION_FILE_STORE: string;
   SEQUENCING_FILE_STORE: string;
+  WORKSPACE_BASE_URL: string;
   SECRETS?: Record<string, string>;
 };
