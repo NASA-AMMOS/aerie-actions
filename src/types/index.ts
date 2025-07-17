@@ -19,13 +19,6 @@ export type ActionMain = (
 
 export type UserRole = string | 'aerie_admin';
 
-export type User = {
-  id: string | null;
-  token: string;
-  activeRole: UserRole;
-  allowedRoles: UserRole[];
-  defaultRole: UserRole;
-}
 export type ActionsConfig = {
   ACTION_FILE_STORE: string;
   SEQUENCING_FILE_STORE: string;

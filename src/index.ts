@@ -8,31 +8,9 @@ import {
   ReadParcelResult,
 } from './types/db-types';
 import { dictionaryQuery, queryReadParcel } from './helpers/db-helpers';
-import { ActionsConfig, User } from './types';
+import { ActionsConfig } from './types';
 export * from './types';
 
-/**
- * Reads a list of sequences for a given `workspaceId`.
- *
- * @param dbClient - A client that is part of our connection pool.
- * @param workspaceId - The id of the workspace the sequence is a part of.
- * @returns The list of sequences in the workspace (without their contents)
-
-export function queryListSequences(
-  dbClient: PoolClient,
-  workspaceId: number,
-): Promise<QueryResult<ReadSequenceListResult>> {
-  // List all sequences in the action's workspace
-  return dbClient.query(
-    `
-      select name, id, workspace_id, parcel_id, owner, created_at, updated_at 
-        from sequencing.user_sequence
-        where workspace_id = $1;
-    `,
-    [workspaceId],
-  );
-}
-*/
 
 /**
  * Reads a Channel Dictionary for a given `id`.
@@ -80,7 +58,6 @@ export function queryReadParameterDictionary(
 export class ActionsAPI {
   config: ActionsConfig;
   dbClient: PoolClient;
-  user: User | null;
   workspaceId: number;
 
   ACTION_FILE_STORE: string;
@@ -95,12 +72,10 @@ export class ActionsAPI {
    * @param workspaceId - The id of the Workspace the Action is associated with.
    * @param config - A config containing an `ACTION_FILE_STORE`, `SEQUENCING_FILE_STORE`, and `WORKSPACE_BASE_URL`
    * so the action can read files.
-   * @param user - A User object for future use in authorization.
    */
-  constructor(dbClient: PoolClient, workspaceId: number, config: ActionsConfig, user: User | null) {
+  constructor(dbClient: PoolClient, workspaceId: number, config: ActionsConfig) {
     this.dbClient = dbClient;
     this.workspaceId = workspaceId;
-    this.user = user;
     this.config = config;
 
     this.ACTION_FILE_STORE = config.ACTION_FILE_STORE;
@@ -144,16 +119,8 @@ export class ActionsAPI {
     if (!this.WORKSPACE_BASE_URL) {
       throw new Error('WORKSPACE_BASE_URL not configured');
     }
-    if (!this.user) {
-      throw new Error('User auth info required for workspace HTTP requests');
-    }
 
-    // TODO: These will need to be populated in the future once action auth is supported
-    const headers: HeadersInit = {
-      Authorization: `Bearer ${this.user.token ?? 'TODO'}`,
-      'x-hasura-role': this.user.activeRole ?? 'TODO',
-      'x-hasura-user-id': this.user.id ?? 'TODO',
-    };
+    const headers: HeadersInit = {};
 
     const methodsWithBody = ['POST', 'PUT'];
     let requestBody: BodyInit | undefined = undefined;
@@ -276,11 +243,12 @@ export class ActionsAPI {
   ): Promise<any> {
     if (this.WORKSPACE_BASE_URL) {
       try {
-        const path = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+        const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+        const destPath = `/ws/${this.workspaceId}/${encodeURIComponent(dest)}`;
         await this.reqWorkspace(
-          path,
+          sourcePath,
           'POST',
-          {"copyTo": dest},
+          {"copyTo": destPath},
           false
         );
         return { success: true };
