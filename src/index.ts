@@ -157,20 +157,16 @@ export class ActionsAPI {
    * @param path - The path of the given workspace context to query
    */
   async listFiles(path: string): Promise<String> {
-    if (this.WORKSPACE_BASE_URL) {
-      // HTTP backend - fetch workspace contents
-      // Example endpoint: GET /ws/:workspaceId
-      const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
+    // HTTP backend - fetch workspace contents
+    // Example endpoint: GET /ws/:workspaceId
+    const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
 
-      try {
-        const data = await this.reqWorkspace<String>(fullPath, 'GET', null, false);
-        if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
-        return data;
-      } catch (e) {
-        throw new Error(`Failed to read contents for workspace id ${this.workspaceId}: ${(e as Error).message} `);
-      }
-    } else {
-      throw new Error('Backend not configured to read workspace contents');
+    try {
+      const data = await this.reqWorkspace<String>(fullPath, 'GET', null, false);
+      if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
+      return data;
+    } catch (e) {
+      throw new Error(`Failed to read contents for workspace id ${this.workspaceId}: ${(e as Error).message} `);
     }
   }
 
@@ -179,21 +175,16 @@ export class ActionsAPI {
    * @param path - The path of the given workspace context to query
    */
   async readFile(path: string): Promise<String> {
+    // HTTP backend - fetch sequence file by name
+    // Example endpoint: GET /ws/:workspaceId/:name
+    const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
 
-    if (this.WORKSPACE_BASE_URL) {
-      // HTTP backend - fetch sequence file by name
-      // Example endpoint: GET /ws/:workspaceId/:name
-      const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
-
-      try {
-        const data = await this.reqWorkspace<String>(fullPath, 'GET', '{}', false);
-        if (!data) throw new Error(`File ${path} not found`);
-        return data;
-      } catch (e) {
-        throw new Error(`Failed to read file '${path}': ${(e as Error).message}`);
-      }
-    } else {
-      throw new Error('Backend not configured to read file');
+    try {
+      const data = await this.reqWorkspace<String>(fullPath, 'GET', '{}', false);
+      if (!data) throw new Error(`File ${path} not found`);
+      return data;
+    } catch (e) {
+      throw new Error(`Failed to read file '${path}': ${(e as Error).message}`);
     }
   }
 
@@ -209,26 +200,21 @@ export class ActionsAPI {
     contents: string,
     overwrite: boolean = false
   ): Promise<any> {
-    if (this.WORKSPACE_BASE_URL) {
-      // Example: PUT /ws/:workspaceId/:name
+    // Example: PUT /ws/:workspaceId/:name
+    try {
+      const formData = new FormData();
+      formData.append("file", new Blob([contents]), name);
+      const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=file&overwrite=${overwrite}`;
 
-      try {
-        const formData = new FormData();
-        formData.append("file", new Blob([contents]), name);
-        const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=file&overwrite=${overwrite}`;
-
-        await this.reqWorkspace(
-          path,
-          'PUT',
-          formData,
-          false
-        );        
-        return { success: true };
-      } catch (e) {
-        throw new Error(`Failed to write file '${name}': ${(e as Error).message}`);
-      }
-    } else {
-      throw new Error('No backend configured to write file');
+      await this.reqWorkspace(
+        path,
+        'PUT',
+        formData,
+        false
+      );
+      return { success: true };
+    } catch (e) {
+      throw new Error(`Failed to write file '${name}': ${(e as Error).message}`);
     }
   }
 
@@ -241,22 +227,18 @@ export class ActionsAPI {
     source: string,
     dest: string
   ): Promise<any> {
-    if (this.WORKSPACE_BASE_URL) {
-      try {
-        const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
-        const destPath = `/ws/${this.workspaceId}/${encodeURIComponent(dest)}`;
-        await this.reqWorkspace(
-          sourcePath,
-          'POST',
-          {"copyTo": destPath},
-          false
-        );
-        return { success: true };
-      } catch (e) {
-        throw new Error(`Failed to copy file '${source}' to '${dest}': ${(e as Error).message}`);
-      }
-    } else {
-      throw new Error('No backend configured to copy file');
+    try {
+      const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+      const destPath = `/ws/${this.workspaceId}/${encodeURIComponent(dest)}`;
+      await this.reqWorkspace(
+        sourcePath,
+        'POST',
+        {"copyTo": destPath},
+        false
+      );
+      return { success: true };
+    } catch (e) {
+      throw new Error(`Failed to copy file '${source}' to '${dest}': ${(e as Error).message}`);
     }
   }
 
@@ -270,26 +252,21 @@ export class ActionsAPI {
     name: string,
     overwrite: boolean
   ): Promise<any> {
-    if (this.WORKSPACE_BASE_URL) {
-      // Example: PUT /ws/:workspaceId/:name
+    // Example: PUT /ws/:workspaceId/:name
+    try {
+      // const formData = new FormData();
+      // formData.append("file", new Blob([definition]), name);
+      const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=directory&overwrite=${overwrite}`;
 
-      try {
-        // const formData = new FormData();
-        // formData.append("file", new Blob([definition]), name);
-        const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=directory&overwrite=${overwrite}`;
-
-        await this.reqWorkspace(
-          path,
-          'PUT',
-          '{}',
-          false
-        );
-        return { success: true };
-      } catch (e) {
-        throw new Error(`Failed to create directory '${name}': ${(e as Error).message}`);
-      }
-    } else {
-      throw new Error('No backend configured to create directory');
+      await this.reqWorkspace(
+        path,
+        'PUT',
+        '{}',
+        false
+      );
+      return { success: true };
+    } catch (e) {
+      throw new Error(`Failed to create directory '${name}': ${(e as Error).message}`);
     }
   }
 
