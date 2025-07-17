@@ -160,14 +160,9 @@ export class ActionsAPI {
     // HTTP backend - fetch workspace contents
     // Example endpoint: GET /ws/:workspaceId
     const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
-
-    try {
-      const data = await this.reqWorkspace<String>(fullPath, 'GET', null, false);
-      if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
-      return data;
-    } catch (e) {
-      throw new Error(`Failed to read contents for workspace id ${this.workspaceId}: ${(e as Error).message} `);
-    }
+    const data = await this.reqWorkspace<String>(fullPath, 'GET', null, false);
+    if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
+    return data;
   }
 
   /**
@@ -178,14 +173,9 @@ export class ActionsAPI {
     // HTTP backend - fetch sequence file by name
     // Example endpoint: GET /ws/:workspaceId/:name
     const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
-
-    try {
-      const data = await this.reqWorkspace<String>(fullPath, 'GET', '{}', false);
-      if (!data) throw new Error(`File ${path} not found`);
-      return data;
-    } catch (e) {
-      throw new Error(`Failed to read file '${path}': ${(e as Error).message}`);
-    }
+    const data = await this.reqWorkspace<String>(fullPath, 'GET', '{}', false);
+    if (!data) throw new Error(`File ${path} not found`);
+    return data;
   }
 
   /**
@@ -201,21 +191,16 @@ export class ActionsAPI {
     overwrite: boolean = false
   ): Promise<any> {
     // Example: PUT /ws/:workspaceId/:name
-    try {
-      const formData = new FormData();
-      formData.append("file", new Blob([contents]), name);
-      const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=file&overwrite=${overwrite}`;
-
-      await this.reqWorkspace(
-        path,
-        'PUT',
-        formData,
-        false
-      );
-      return { success: true };
-    } catch (e) {
-      throw new Error(`Failed to write file '${name}': ${(e as Error).message}`);
-    }
+    const formData = new FormData();
+    formData.append("file", new Blob([contents]), name);
+    const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=file&overwrite=${overwrite}`;
+    await this.reqWorkspace(
+      path,
+      'PUT',
+      formData,
+      false
+    );
+    return { success: true };
   }
 
   /**
@@ -227,19 +212,15 @@ export class ActionsAPI {
     source: string,
     dest: string
   ): Promise<any> {
-    try {
-      const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
-      const destPath = `/ws/${this.workspaceId}/${encodeURIComponent(dest)}`;
-      await this.reqWorkspace(
-        sourcePath,
-        'POST',
-        {"copyTo": destPath},
-        false
-      );
-      return { success: true };
-    } catch (e) {
-      throw new Error(`Failed to copy file '${source}' to '${dest}': ${(e as Error).message}`);
-    }
+    const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+    const destPath = `/ws/${this.workspaceId}/${encodeURIComponent(dest)}`;
+    await this.reqWorkspace(
+      sourcePath,
+      'POST',
+      {"copyTo": destPath},
+      false
+    );
+    return { success: true };
   }
 
   /**
@@ -251,20 +232,34 @@ export class ActionsAPI {
     source: string,
     dest: string
   ): Promise<any> {
-    try {
-      const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
-      const destPath = `/ws/${this.workspaceId}/${encodeURIComponent(dest)}`;
-      await this.reqWorkspace(
-        sourcePath,
-        'POST',
-        {"moveTo": destPath},
-        false
-      );
-      return { success: true };
-    } catch (e) {
-      throw new Error(`Failed to move file '${source}' to '${dest}': ${(e as Error).message}`);
-    }
+    const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+    const destPath = `/ws/${this.workspaceId}/${encodeURIComponent(dest)}`;
+    await this.reqWorkspace(
+      sourcePath,
+      'POST',
+      {"moveTo": destPath},
+      false
+    );
+    return { success: true };
   }
+
+  /**
+   * Delete a file or directory within the workspace to a new location.
+   * @param source - Source path of the file or directory.
+   */
+  async deleteFile(
+    source: string
+  ): Promise<any> {
+    const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+    await this.reqWorkspace(
+      sourcePath,
+      'DELETE',
+      {},
+      false
+    );
+    return { success: true };
+  }
+
 
 
   /**
@@ -276,19 +271,14 @@ export class ActionsAPI {
     name: string
   ): Promise<any> {
     // Example: PUT /ws/:workspaceId/:name
-    try {
-      const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=directory`;
-
-      await this.reqWorkspace(
-        path,
-        'PUT',
-        '{}',
-        false
-      );
-      return { success: true };
-    } catch (e) {
-      throw new Error(`Failed to create directory '${name}': ${(e as Error).message}`);
-    }
+    const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=directory`;
+    await this.reqWorkspace(
+      path,
+      'PUT',
+      '{}',
+      false
+    );
+    return { success: true };
   }
 
   /**
