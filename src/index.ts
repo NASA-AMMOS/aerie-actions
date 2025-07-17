@@ -242,6 +242,30 @@ export class ActionsAPI {
     }
   }
 
+  /**
+   * Move a file within the workspace to a new location.
+   * @param source - Source path of the file
+   * @param dest - Destination path of the file.
+   */
+  async moveFile(
+    source: string,
+    dest: string
+  ): Promise<any> {
+    try {
+      const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+      const destPath = `/ws/${this.workspaceId}/${encodeURIComponent(dest)}`;
+      await this.reqWorkspace(
+        sourcePath,
+        'POST',
+        {"moveTo": destPath},
+        false
+      );
+      return { success: true };
+    } catch (e) {
+      throw new Error(`Failed to move file '${source}' to '${dest}': ${(e as Error).message}`);
+    }
+  }
+
 
   /**
    * Create a new directory in the given workspace filesystem.
