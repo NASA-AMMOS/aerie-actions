@@ -242,21 +242,18 @@ export class ActionsAPI {
     }
   }
 
+
   /**
    * Create a new directory in the given workspace filesystem.
    * @param name - Name/path of the new directory.  This functions like mkdir -p; if parent folders
-   * do not exist, they will be created.
-   * @param overwrite - If the directory already exists, overwrite it.
+   * do not exist, they will be created. If a directory already exists, it will be skipped.
    */
   async createDirectory(
-    name: string,
-    overwrite: boolean
+    name: string
   ): Promise<any> {
     // Example: PUT /ws/:workspaceId/:name
     try {
-      // const formData = new FormData();
-      // formData.append("file", new Blob([definition]), name);
-      const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=directory&overwrite=${overwrite}`;
+      const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=directory`;
 
       await this.reqWorkspace(
         path,
@@ -268,6 +265,17 @@ export class ActionsAPI {
     } catch (e) {
       throw new Error(`Failed to create directory '${name}': ${(e as Error).message}`);
     }
+  }
+
+  /**
+   * Create a new set of directories in the given workspace filesystem. Alias for createDirectory.
+   * @param name - Name/path of the new directory.  This functions like mkdir -p; if parent folders
+   * do not exist, they will be created. If a directory already exists, it will be skipped.
+   */
+  async createDirectories(
+    name: string
+  ): Promise<any> {
+    await this.createDirectory(name);
   }
 
 
