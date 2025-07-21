@@ -107,27 +107,24 @@ export class ActionsAPI {
    * @param path - URL path to be queried
    * @param method - URL method to be used (GET, PUT, POST)
    * @param body - Request body, if needed.
-   * @param asJson - Whether the response is expected to be formatted as JSON. Defaults to true.
    * @private
    */
-  private async reqWorkspace<T = any>(
+  private async reqWorkspace(
     path: string,
     method: string,
     body: any | null = null,
-    asJson: boolean = true,
-  ): Promise<T> {
+  ): Promise<string> {
     if (!this.WORKSPACE_BASE_URL) {
       throw new Error('WORKSPACE_BASE_URL not configured');
     }
 
     const headers: HeadersInit = {};
-
     const methodsWithBody = ['POST', 'PUT'];
     let requestBody: BodyInit | undefined = undefined;
 
     if (body !== null && methodsWithBody.includes(method.toUpperCase())) {
       if (body instanceof FormData) {
-        // Don't set Content-Type; fetch will do it automatically
+        // Let fetch set Content-Type
         requestBody = body;
       } else {
         headers['Content-Type'] = 'application/json';
@@ -148,7 +145,7 @@ export class ActionsAPI {
       throw new Error(`${response.status} - ${text}`);
     }
 
-    return asJson ? JSON.parse(text) : (text as T);
+    return text;
   }
 
 
@@ -160,7 +157,7 @@ export class ActionsAPI {
     // HTTP backend - fetch workspace contents
     // Example endpoint: GET /ws/:workspaceId
     const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
-    const data = await this.reqWorkspace<String>(fullPath, 'GET', null, false);
+    const data = await this.reqWorkspace<String>(fullPath, 'GET', null);
     if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
     return data;
   }
@@ -173,7 +170,7 @@ export class ActionsAPI {
     // HTTP backend - fetch sequence file by name
     // Example endpoint: GET /ws/:workspaceId/:name
     const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
-    const data = await this.reqWorkspace<String>(fullPath, 'GET', '{}', false);
+    const data = await this.reqWorkspace<String>(fullPath, 'GET', '{}');
     if (!data) throw new Error(`File ${path} not found`);
     return data;
   }
@@ -197,8 +194,7 @@ export class ActionsAPI {
     await this.reqWorkspace(
       path,
       'PUT',
-      formData,
-      false
+      formData
     );
     return { success: true };
   }
@@ -217,8 +213,7 @@ export class ActionsAPI {
     await this.reqWorkspace(
       sourcePath,
       'POST',
-      {"copyTo": destPath},
-      false
+      {"copyTo": destPath}
     );
     return { success: true };
   }
@@ -237,8 +232,7 @@ export class ActionsAPI {
     await this.reqWorkspace(
       sourcePath,
       'POST',
-      {"moveTo": destPath},
-      false
+      {"moveTo": destPath}
     );
     return { success: true };
   }
@@ -254,8 +248,7 @@ export class ActionsAPI {
     await this.reqWorkspace(
       sourcePath,
       'DELETE',
-      {},
-      false
+      {}
     );
     return { success: true };
   }
@@ -275,8 +268,7 @@ export class ActionsAPI {
     await this.reqWorkspace(
       path,
       'PUT',
-      '{}',
-      false
+      '{}'
     );
     return { success: true };
   }
