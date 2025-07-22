@@ -209,11 +209,10 @@ export class ActionsAPI {
     dest: string
   ): Promise<any> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
-    const destPath = `/ws/${this.workspaceId}/${encodeURIComponent(dest)}`;
     await this.reqWorkspace(
       sourcePath,
       'POST',
-      {"copyTo": destPath}
+      {"copyTo": dest}
     );
     return { success: true };
   }
@@ -228,11 +227,10 @@ export class ActionsAPI {
     dest: string
   ): Promise<any> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
-    const destPath = `/ws/${this.workspaceId}/${encodeURIComponent(dest)}`;
     await this.reqWorkspace(
       sourcePath,
       'POST',
-      {"moveTo": destPath}
+      {"moveTo": dest}
     );
     return { success: true };
   }
