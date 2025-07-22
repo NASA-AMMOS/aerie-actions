@@ -157,7 +157,7 @@ export class ActionsAPI {
     // HTTP backend - fetch workspace contents
     // Example endpoint: GET /ws/:workspaceId
     const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
-    const data = await this.reqWorkspace<String>(fullPath, 'GET', null);
+    const data = await this.reqWorkspace(fullPath, 'GET', null);
     if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
     return data;
   }
@@ -170,7 +170,7 @@ export class ActionsAPI {
     // HTTP backend - fetch sequence file by name
     // Example endpoint: GET /ws/:workspaceId/:name
     const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
-    const data = await this.reqWorkspace<String>(fullPath, 'GET', '{}');
+    const data = await this.reqWorkspace(fullPath, 'GET', '{}');
     if (!data) throw new Error(`File ${path} not found`);
     return data;
   }
