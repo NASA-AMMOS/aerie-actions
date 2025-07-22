@@ -188,8 +188,11 @@ export class ActionsAPI {
     overwrite: boolean = false
   ): Promise<any> {
     // Example: PUT /ws/:workspaceId/:name
+    // Strip path, keep only the file name
+    const filenameOnly = name.split(/[/\\]/).pop()!;
+
     const formData = new FormData();
-    formData.append("file", new Blob([contents]), name);
+    formData.append("file", new Blob([contents]), filenameOnly);
     const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=file&overwrite=${overwrite}`;
     await this.reqWorkspace(
       path,
