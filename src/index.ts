@@ -171,7 +171,10 @@ export class ActionsAPI {
     // Example endpoint: GET /ws/:workspaceId/:name
     const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
     const data = await this.reqWorkspace(fullPath, 'GET', '{}');
-    if (!data) throw new Error(`File ${path} not found`);
+    // Intentionally not using `if (!data)` here, as empty string is falsy
+    if (data === null || data === undefined) {
+      throw new Error(`File ${path} not found`);
+    }
     return data;
   }
 
