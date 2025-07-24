@@ -345,18 +345,18 @@ export class ActionsAPI {
     );
   }
 
+
   /**
-   * Reads a Parcel for a given id.
+   * Reads a Parcel for the current workspace.
    *
-   * @param id - The id of the Parcel.
    * @returns The parcel detail, including ids for dictionaries it contains
    */
-  async readParcel(id: number): Promise<ReadParcelResult> {
-    const result = await queryReadParcel(this.dbClient!, id);
+  async readParcel(): Promise<ReadParcelResult> {
+    const result = await queryReadParcel(this.dbClient!, this.workspaceId);
     const rows = result.rows;
 
     if (!rows.length) {
-      throw new Error(`Parcel with id: ${id} does not exist`);
+      throw new Error(`Could not find parcel for workspace id ${this.workspaceId}`);
     }
 
     return rows[0];
