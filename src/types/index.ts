@@ -16,8 +16,12 @@ export type ActionMain = (
   actionsAPI: ActionsAPI,
 ) => Promise<ActionResult>;
 
+
+export type UserRole = string | 'aerie_admin';
+
 export type ActionsConfig = {
   ACTION_FILE_STORE: string;
   SEQUENCING_FILE_STORE: string;
+  WORKSPACE_BASE_URL: string;
   SECRETS?: Record<string, string>;
 };

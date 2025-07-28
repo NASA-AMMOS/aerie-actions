@@ -11,13 +11,27 @@ export function dictionaryQuery(
   `;
 }
 
-export function queryReadParcel(dbClient: PoolClient, id: number): Promise<QueryResult<ReadParcelResult>> {
+export function queryReadParcel(dbClient: PoolClient, workspaceId: number): Promise<QueryResult<ReadParcelResult>> {
   return dbClient.query(
     `
-      select name, id, command_dictionary_id, channel_dictionary_id, sequence_adaptation_id, created_at, owner, updated_at, updated_by
-      from sequencing.parcel
-        where id = $1;
+      select 
+        p.name, 
+        p.id, 
+        p.command_dictionary_id, 
+        p.channel_dictionary_id, 
+        p.sequence_adaptation_id, 
+        p.created_at, 
+        p.owner, 
+        p.updated_at, 
+        p.updated_by
+      from sequencing.parcel p
+      where p.id = (
+        select parcel_id
+        from sequencing.workspace
+        where id = $1
+      );
     `,
-    [id],
+    [workspaceId],
   );
 }
+

@@ -11,27 +11,6 @@ import { dictionaryQuery, queryReadParcel } from './helpers/db-helpers';
 import { ActionsConfig } from './types';
 export * from './types';
 
-/**
- * Reads a list of sequences for a given `workspaceId`.
- *
- * @param dbClient - A client that is part of our connection pool.
- * @param workspaceId - The id of the workspace the sequence is a part of.
- * @returns The list of sequences in the workspace (without their contents)
- */
-export function queryListSequences(
-  dbClient: PoolClient,
-  workspaceId: number,
-): Promise<QueryResult<ReadSequenceListResult>> {
-  // List all sequences in the action's workspace
-  return dbClient.query(
-    `
-      select name, id, workspace_id, parcel_id, owner, created_at, updated_at 
-        from sequencing.user_sequence
-        where workspace_id = $1;
-    `,
-    [workspaceId],
-  );
-}
 
 /**
  * Reads a Channel Dictionary for a given `id`.
@@ -75,70 +54,15 @@ export function queryReadParameterDictionary(
   return dbClient.query(dictionaryQuery('parameter_dictionary'), [id]);
 }
 
-/**
- * Reads a Sequence for a given `name` and `workspaceId`.
- *
- * @param dbClient - A client that is part of our connection pool.
- * @param name - The name of the Sequence.
- * @param workspaceId - The id of the Workspace that the Sequence is a part of.
- * @returns The requested Sequence (including contents)
- */
-export function queryReadSequence(
-  dbClient: PoolClient,
-  name: string,
-  workspaceId: number,
-): Promise<QueryResult<ReadSequenceResult>> {
-  return dbClient.query(
-    `
-      select name, id, workspace_id, parcel_id, definition, seq_json, owner, created_at, updated_at
-      from sequencing.user_sequence
-        where name = $1 
-          and workspace_id = $2;
-    `,
-    [name, workspaceId],
-  );
-}
-
-/**
- * Find a Sequence by name in the same Workspace that the Action is running in, if it exists
- * overwrite its definition otherwise create it.
- *
- * @param dbClient - A client that is part of our connection pool.
- * @param name - The name of the Sequence.
- * @param workspaceId - The id of the Workspace that the Sequence is a part of.
- * @param definition - The definition of the Sequence.
- * @param parcelId - The id of the Parcel that the Sequence was written with.
- * @returns The result of the attempt to write the sequence
- */
-export function queryWriteSequence(
-  dbClient: PoolClient,
-  name: string,
-  workspaceId: number,
-  definition: string,
-  parcelId: number,
-): Promise<QueryResult<WriteSequenceResult>> {
-  return dbClient.query(
-    `
-      WITH updated AS (
-        UPDATE sequencing.user_sequence
-        SET definition = $3
-        WHERE name = $1 AND workspace_id = $2
-        RETURNING *
-      )
-      -- insert sequence if we didn't successfully update 
-      INSERT INTO sequencing.user_sequence (name, workspace_id, definition, parcel_id)
-      SELECT $1, $2, $3, $4
-      WHERE NOT EXISTS (SELECT 1 FROM updated);
-    `,
-    [name, workspaceId, definition, parcelId],
-  );
-}
-
 // Main API class used by the user's action
 export class ActionsAPI {
+  config: ActionsConfig;
   dbClient: PoolClient;
   workspaceId: number;
-  config: ActionsConfig;
+
+  ACTION_FILE_STORE: string;
+  SEQUENCING_FILE_STORE: string;
+  WORKSPACE_BASE_URL: string;
 
   static ENVIRONMENT_VARIABLE_PREFIX = 'PUBLIC_ACTION_';
 
@@ -146,13 +70,17 @@ export class ActionsAPI {
    *
    * @param dbClient - A client that is part of our connection pool.
    * @param workspaceId - The id of the Workspace the Action is associated with.
-   * @param config - A config containing an `ACTION_FILE_STORE` and `SEQUENCING_FILE_STORE` so the action
-   * can read files.
+   * @param config - A config containing an `ACTION_FILE_STORE`, `SEQUENCING_FILE_STORE`, and `WORKSPACE_BASE_URL`
+   * so the action can read files.
    */
   constructor(dbClient: PoolClient, workspaceId: number, config: ActionsConfig) {
     this.dbClient = dbClient;
     this.workspaceId = workspaceId;
     this.config = config;
+
+    this.ACTION_FILE_STORE = config.ACTION_FILE_STORE;
+    this.SEQUENCING_FILE_STORE = config.SEQUENCING_FILE_STORE;
+    this.WORKSPACE_BASE_URL = config.WORKSPACE_BASE_URL;
   }
 
   /**
@@ -161,6 +89,7 @@ export class ActionsAPI {
    * @param name The name of the environment variable.
    * @returns The value of the environment variable if it was found, otherwise undefined.
    */
+
   getEnvironmentVariable(name: string): string | undefined {
     if (name.startsWith(ActionsAPI.ENVIRONMENT_VARIABLE_PREFIX)) {
       return process.env[name];
@@ -174,21 +103,192 @@ export class ActionsAPI {
   }
 
   /**
-   * Lists all the Sequences in the Action's Workspace.
-   *
-   * @returns - The list of sequences in the workspace (without their contents)
+   * A helper method to perform GET, PUT, and POST methods on the workspace endpoint.
+   * @param path - URL path to be queried
+   * @param method - URL method to be used (GET, PUT, POST)
+   * @param body - Request body, if needed.
+   * @private
    */
-  async listSequences(): Promise<ReadSequenceListResult[]> {
-    const result = await queryListSequences(this.dbClient, this.workspaceId);
-    return result.rows;
+  private async reqWorkspace(
+    path: string,
+    method: string,
+    body: any | null = null,
+  ): Promise<string> {
+    if (!this.WORKSPACE_BASE_URL) {
+      throw new Error('WORKSPACE_BASE_URL not configured');
+    }
+
+    const headers: HeadersInit = {};
+    const methodsWithBody = ['POST', 'PUT'];
+    let requestBody: BodyInit | undefined = undefined;
+
+    if (body !== null && methodsWithBody.includes(method.toUpperCase())) {
+      if (body instanceof FormData) {
+        // Let fetch set Content-Type
+        requestBody = body;
+      } else {
+        headers['Content-Type'] = 'application/json';
+        requestBody = JSON.stringify(body);
+      }
+    }
+
+    const options: RequestInit = {
+      method,
+      headers,
+      body: requestBody,
+    };
+
+    const response = await fetch(`${this.WORKSPACE_BASE_URL}${path}`, options);
+    const text = await response.text();
+
+    if (!response.ok) {
+      throw new Error(`${response.status} - ${text}`);
+    }
+
+    return text;
+  }
+
+
+  /**
+   * List files in the workspace at the given path.
+   * @param path - The path of the given workspace context to query
+   */
+  async listFiles(path: string): Promise<String> {
+    // HTTP backend - fetch workspace contents
+    // Example endpoint: GET /ws/:workspaceId
+    const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
+    const data = await this.reqWorkspace(fullPath, 'GET', null);
+    if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
+    return data;
   }
 
   /**
-   * Reads a Channel Dictionary from the database.
-   *
-   * @param id - The id of the Channel Dictionary.
-   * @returns The Channel Dictionary with the given ID
+   * Read a single file's contents in the given workspace.
+   * @param path - The path of the given workspace context to query
    */
+  async readFile(path: string): Promise<String> {
+    // HTTP backend - fetch sequence file by name
+    // Example endpoint: GET /ws/:workspaceId/:name
+    const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
+    const data = await this.reqWorkspace(fullPath, 'GET', '{}');
+    // Intentionally not using `if (!data)` here, as empty string is falsy
+    if (data === null || data === undefined) {
+      throw new Error(`File ${path} not found`);
+    }
+    return data;
+  }
+
+  /**
+   * Write a file with the given name and definition to the workspace filesystem.
+   * @param name - Full path of the file from the workspace root. This functions like mkdir -p; if parent folders
+   * do not exist, they will be created.
+   * @param contents - The contents of the file to be written.
+   * @param overwrite - If the file already exists, overwrite its contents.
+   */
+  async writeFile(
+    name: string,
+    contents: string,
+    overwrite: boolean = false
+  ): Promise<any> {
+    // Example: PUT /ws/:workspaceId/:name
+    // Strip path, keep only the file name
+    const filenameOnly = name.split(/[/\\]/).pop()!;
+
+    const formData = new FormData();
+    formData.append("file", new Blob([contents]), filenameOnly);
+    const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=file&overwrite=${overwrite}`;
+    await this.reqWorkspace(
+      path,
+      'PUT',
+      formData
+    );
+    return { success: true };
+  }
+
+  /**
+   * Copy a file within the workspace to a new location.
+   * @param source - Source path of the file
+   * @param dest - Destination path of the file.
+   */
+  async copyFile(
+    source: string,
+    dest: string
+  ): Promise<any> {
+    const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+    await this.reqWorkspace(
+      sourcePath,
+      'POST',
+      {"copyTo": dest}
+    );
+    return { success: true };
+  }
+
+  /**
+   * Move a file within the workspace to a new location.
+   * @param source - Source path of the file
+   * @param dest - Destination path of the file.
+   */
+  async moveFile(
+    source: string,
+    dest: string
+  ): Promise<any> {
+    const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+    await this.reqWorkspace(
+      sourcePath,
+      'POST',
+      {"moveTo": dest}
+    );
+    return { success: true };
+  }
+
+  /**
+   * Delete a file or directory within the workspace to a new location.
+   * @param source - Source path of the file or directory.
+   */
+  async deleteFile(
+    source: string
+  ): Promise<any> {
+    const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
+    await this.reqWorkspace(
+      sourcePath,
+      'DELETE',
+      {}
+    );
+    return { success: true };
+  }
+
+
+
+  /**
+   * Create a new directory in the given workspace filesystem.
+   * @param name - Name/path of the new directory.  This functions like mkdir -p; if parent folders
+   * do not exist, they will be created. If a directory already exists, it will be skipped.
+   */
+  async createDirectory(
+    name: string
+  ): Promise<any> {
+    // Example: PUT /ws/:workspaceId/:name
+    const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=directory`;
+    await this.reqWorkspace(
+      path,
+      'PUT',
+      '{}'
+    );
+    return { success: true };
+  }
+
+  /**
+   * Create a new set of directories in the given workspace filesystem. Alias for createDirectory.
+   * @param name - Name/path of the new directory.  This functions like mkdir -p; if parent folders
+   * do not exist, they will be created. If a directory already exists, it will be skipped.
+   */
+  async createDirectories(
+    name: string
+  ): Promise<any> {
+    await this.createDirectory(name);
+  }
+
+
   async readChannelDictionary(id: number): Promise<ReadDictionaryResult> {
     const result = await queryReadChannelDictionary(this.dbClient, id);
     const rows = result.rows;
@@ -248,52 +348,23 @@ export class ActionsAPI {
     );
   }
 
+
   /**
-   * Reads a Parcel for a given id.
+   * Reads a Parcel for the current workspace.
    *
-   * @param id - The id of the Parcel.
    * @returns The parcel detail, including ids for dictionaries it contains
    */
-  async readParcel(id: number): Promise<ReadParcelResult> {
-    const result = await queryReadParcel(this.dbClient, id);
+  async readParcel(): Promise<ReadParcelResult> {
+    const result = await queryReadParcel(this.dbClient!, this.workspaceId);
     const rows = result.rows;
 
     if (!rows.length) {
-      throw new Error(`Parcel with id: ${id} does not exist`);
+      throw new Error(`Could not find parcel for workspace id ${this.workspaceId}`);
     }
 
     return rows[0];
   }
 
-  /**
-   * Reads a Sequence for a given Sequence name.
-   *
-   * @param name - The name of the Sequence.
-   * @returns The requested Sequence (including contents)
-   */
-  async readSequence(name: string): Promise<ReadSequenceResult> {
-    const result = await queryReadSequence(this.dbClient, name, this.workspaceId);
-    const rows = result.rows;
-
-    if (!rows.length) {
-      throw new Error(`Sequence ${name} does not exist`);
-    }
-    return rows[0];
-  }
-
-  /**
-   * Find a Sequence by name in the same Workspace as the Action, if it exists overwrite its definition otherwise
-   * create it.
-   *
-   * @param name - The name of the Sequence.
-   * @param definition - The new definition of the Sequence.
-   * @param parcelId - The Parcel id of the sequence, @defaultValue `1`.
-   * @returns The result of the attempt to write the sequence
-   */
-  async writeSequence(name: string, definition: string, parcelId: number = 1): Promise<any> {
-    // TODO: rethink whether or not parcelId can have a sane default value or should be required?
-    return await queryWriteSequence(this.dbClient, name, this.workspaceId, definition, parcelId);
-  }
 }
 
 /*
