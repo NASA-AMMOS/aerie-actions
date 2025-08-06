@@ -120,6 +120,8 @@ export class ActionsAPI {
 
     const headers: HeadersInit = {};
     if(this.config.HASURA_GRAPHQL_ADMIN_SECRET) {
+      // todo - replace with per-user auth tokens after rearchitecting aerie action request implementation
+      headers['x-hasura-user-id'] = "Aerie Legacy";
       headers['x-hasura-admin-secret'] = this.config.HASURA_GRAPHQL_ADMIN_SECRET;
     }
     const methodsWithBody = ['POST', 'PUT'];
