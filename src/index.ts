@@ -119,6 +119,9 @@ export class ActionsAPI {
     }
 
     const headers: HeadersInit = {};
+    if(this.config.HASURA_GRAPHQL_ADMIN_SECRET) {
+      headers['x-hasura-admin-secret'] = this.config.HASURA_GRAPHQL_ADMIN_SECRET;
+    }
     const methodsWithBody = ['POST', 'PUT'];
     let requestBody: BodyInit | undefined = undefined;
 
