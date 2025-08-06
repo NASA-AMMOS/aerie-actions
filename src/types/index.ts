@@ -23,5 +23,6 @@ export type ActionsConfig = {
   ACTION_FILE_STORE: string;
   SEQUENCING_FILE_STORE: string;
   WORKSPACE_BASE_URL: string;
+  HASURA_GRAPHQL_ADMIN_SECRET: string;
   SECRETS?: Record<string, string>;
 };
