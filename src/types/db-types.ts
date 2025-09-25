@@ -14,6 +14,7 @@ export type ReadParcelResult = {
   name: string;
   command_dictionary_id: number;
   channel_dictionary_id: number;
+  parcel_dictionary_ids: number[];
   sequence_adaptation_id: number;
   created_at: string;
   owner?: string;

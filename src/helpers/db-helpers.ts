@@ -19,19 +19,31 @@ export function queryReadParcel(dbClient: PoolClient, workspaceId: number): Prom
         p.id, 
         p.command_dictionary_id, 
         p.channel_dictionary_id, 
+        array_agg(ppd.parameter_dictionary_id ORDER BY ppd.parameter_dictionary_id) as parameter_dictionary_ids,
         p.sequence_adaptation_id, 
         p.created_at, 
         p.owner, 
         p.updated_at, 
         p.updated_by
       from sequencing.parcel p
+      left join sequencing.parcel_to_parameter_dictionary ppd
+        on p.id = ppd.parcel_id
       where p.id = (
         select parcel_id
         from sequencing.workspace
         where id = $1
-      );
+      )
+      group by
+        p.name,
+        p.id,
+        p.command_dictionary_id,
+        p.channel_dictionary_id,
+        p.sequence_adaptation_id,
+        p.created_at,
+        p.owner,
+        p.updated_at,
+        p.updated_by;
     `,
     [workspaceId],
   );
 }
-
