@@ -19,7 +19,11 @@ export function queryReadParcel(dbClient: PoolClient, workspaceId: number): Prom
         p.id, 
         p.command_dictionary_id, 
         p.channel_dictionary_id, 
-        array_agg(ppd.parameter_dictionary_id ORDER BY ppd.parameter_dictionary_id) as parameter_dictionary_ids,
+        coalesce(
+            array_agg(ppd.parameter_dictionary_id order by ppd.parameter_dictionary_id)
+            filter (where ppd.parameter_dictionary_id is not null),
+            '{}'
+        ) as parameter_dictionary_ids,
         p.sequence_adaptation_id, 
         p.created_at, 
         p.owner, 
