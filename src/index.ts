@@ -7,8 +7,9 @@ import {
   WriteSequenceResult,
   ReadParcelResult,
 } from './types/db-types';
-import { dictionaryQuery, queryReadParcel } from './helpers/db-helpers';
+import {adaptationQuery, dictionaryQuery, queryReadParcel} from './helpers/db-helpers';
 import { ActionsConfig } from './types';
+import vm from "node:vm";
 export * from './types';
 
 
@@ -371,6 +372,46 @@ export class ActionsAPI {
     return rows[0];
   }
 
+  /**
+   * Load the JS sequence adaptation for the current workspace from the DB,
+   * execute it within a VM JS context,
+   * and return it as a JS object with functions that can be executed by the action
+   *
+   * @returns Promise which resolves to the loaded sequence adaptation JS object
+   */
+  async loadAdaptation(): Promise<any> {
+    // lookup workspace's parcel and get its sequence adaptation ID
+    const parcel = await this.readParcel();
+    const adaptationId = parcel.sequence_adaptation_id;
+    if(!Number.isFinite(adaptationId)) throw new Error(`Invalid adaptation id ${adaptationId} (parcel ${parcel.id})`);
+
+    // load sequence adaptation from the DB (as string)
+    const adaptationResult = await this.dbClient.query(adaptationQuery(), [adaptationId]);
+    if(!adaptationResult.rowCount || !adaptationResult.rows[0])
+      throw new Error(`Could not find sequence adaptation with id ${adaptationId} (parcel ${parcel.id})`);
+    const adaptationRow = adaptationResult.rows[0];
+    const adaptationStr = (adaptationRow.adaptation || '') as string;
+    if(!adaptationStr.length)
+      throw new Error(`Could not find sequence adaptation with id ${adaptationId} (parcel ${parcel.id})`);
+
+    // evaluate the adaptation code in a node VM context & return the result
+    // pass our console down in context to make sure console.logs from inside adaptation code get logged
+    const vmContext = vm.createContext({ console });
+    let adaptation: any;
+    try {
+      adaptation = vm.runInContext(adaptationStr, vmContext, { displayErrors: true });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : JSON.stringify(err);
+      throw new Error(
+          `failed to execute adaptation ${adaptationId} (parcel ${parcel.id}): ${message}`,
+          { cause: err instanceof Error ? err : undefined }
+      );
+    }
+    if (typeof adaptation !== 'object' || adaptation === null) {
+      throw new TypeError(`Adaptation ${adaptationId} did not evaluate to an object: ${String(adaptation)}`);
+    }
+    return adaptation;
+  }
 }
 
 /*
