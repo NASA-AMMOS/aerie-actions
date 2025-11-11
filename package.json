@@ -25,6 +25,8 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@codemirror/language": "6.11.0",
+    "@codemirror/state": "6.5.2",
     "@types/node": "^22.13.4",
     "@types/pg": "^8.11.11"
   },

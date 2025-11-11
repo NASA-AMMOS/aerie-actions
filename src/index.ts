@@ -12,6 +12,9 @@ import { ActionsConfig } from './types';
 import vm from "node:vm";
 export * from './types';
 
+// codemirror dependencies to be passed to user sequencing adaptation, if loaded
+import * as cmState from "@codemirror/state";
+import * as cmLanguage from "@codemirror/language";
 
 /**
  * Reads a Channel Dictionary for a given `id`.
@@ -394,13 +397,32 @@ export class ActionsAPI {
     if(!adaptationStr.length)
       throw new Error(`Could not find sequence adaptation with id ${adaptationId} (parcel ${parcel.id})`);
 
+    // the adaptation code is expected to be a commonjs module which calls `require(...)`
+    // to load its codemirror dependencies. inject CM dependencies by passing a custom require to the adaptation
+    // containing just the allowed/known CM packages
+    const customRequire = (id: string) => ({
+      "@codemirror/language": cmLanguage,
+      "@codemirror/state": cmState,
+      // stubs only, these depend on the browser DOM api but may be required by adaptation anyway
+      "@codemirror/commands": {},
+      "@codemirror/view": {
+        // todo: refactor adaptation to not call this until needed
+        Decoration: { mark: () => ({}) },
+      },
+    }[id]);
+
     // evaluate the adaptation code in a node VM context & return the result
     // pass our console down in context to make sure console.logs from inside adaptation code get logged
-    const vmContext = vm.createContext({ console });
+    const vmContext = vm.createContext({
+      console,
+      require: customRequire,
+      exports: {}
+    });
     let adaptation: any;
     try {
       adaptation = vm.runInContext(adaptationStr, vmContext, { displayErrors: true });
     } catch (err) {
+      console.error(err);
       const message = err instanceof Error ? err.message : JSON.stringify(err);
       throw new Error(
           `failed to execute adaptation ${adaptationId} (parcel ${parcel.id}): ${message}`,
