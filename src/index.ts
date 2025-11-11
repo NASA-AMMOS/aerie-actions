@@ -383,12 +383,14 @@ export class ActionsAPI {
    * @returns Promise which resolves to the loaded sequence adaptation JS object
    */
   async loadAdaptation(): Promise<any> {
+    // todo: type the return value from this, get type from aerie-sequence-languages library?
     // lookup workspace's parcel and get its sequence adaptation ID
     const parcel = await this.readParcel();
     const adaptationId = parcel.sequence_adaptation_id;
     if(!Number.isFinite(adaptationId)) throw new Error(`Invalid adaptation id ${adaptationId} (parcel ${parcel.id})`);
 
     // load sequence adaptation from the DB (as string)
+    // todo: use one query to get adaptation via foreign key on parcel
     const adaptationResult = await this.dbClient.query(adaptationQuery(), [adaptationId]);
     if(!adaptationResult.rowCount || !adaptationResult.rows[0])
       throw new Error(`Could not find sequence adaptation with id ${adaptationId} (parcel ${parcel.id})`);

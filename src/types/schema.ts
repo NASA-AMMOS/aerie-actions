@@ -23,20 +23,24 @@ export type ActionValueSchemaReal = {
 
 export type ActionValueSchemaSequence = {
   type: 'sequence';
+  primary?: boolean;
 } & ActionValueSchemaMetadata;
 
 export type ActionValueSchemaSequenceList = {
   type: 'sequenceList';
+  primary?: boolean;
 } & ActionValueSchemaMetadata;
 
 export type ActionValueSchemaFile = {
   type: 'file';
   pattern: string;
+  primary?: boolean;
 } & ActionValueSchemaMetadata
 
 export type ActionValueSchemaFileList = {
   type: 'fileList';
   pattern: string;
+  primary?: boolean;
 } & ActionValueSchemaMetadata;
 
 export type ActionValueSchemaSecret = {
