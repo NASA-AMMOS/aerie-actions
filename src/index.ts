@@ -395,34 +395,41 @@ export class ActionsAPI {
     if(!adaptationResult.rowCount || !adaptationResult.rows[0])
       throw new Error(`Could not find sequence adaptation with id ${adaptationId} (parcel ${parcel.id})`);
     const adaptationRow = adaptationResult.rows[0];
-    const adaptationStr = (adaptationRow.adaptation || '') as string;
-    if(!adaptationStr.length)
+    const adaptationCode = (adaptationRow.adaptation || '') as string;
+    if(!adaptationCode.length)
       throw new Error(`Could not find sequence adaptation with id ${adaptationId} (parcel ${parcel.id})`);
 
     // the adaptation code is expected to be a commonjs module which calls `require(...)`
-    // to load its codemirror dependencies. inject CM dependencies by passing a custom require to the adaptation
-    // containing just the allowed/known CM packages
-    const customRequire = (id: string) => ({
-      "@codemirror/language": cmLanguage,
-      "@codemirror/state": cmState,
-      // stubs only, these depend on the browser DOM api but may be required by adaptation anyway
-      "@codemirror/commands": {},
-      "@codemirror/view": {
-        // todo: refactor adaptation to not call this until needed
-        Decoration: { mark: () => ({}) },
-      },
-    }[id]);
-
+    // to load its Codemirror dependencies. It *must* use the same Codemirror instance/globals as the
+    // outer page context, rather than bundling its own, due to the way CM uses shared internal state fields.
+    // To ensure this, pass a custom `require` function to the module which injects the page's CM dependencies.
+    // (any other dependencies are expected to be bundled into the adaptation code)
+    const moduleRequire = (id: string) => {
+      return {
+        "@codemirror/language": cmLanguage,
+        "@codemirror/state": cmState,
+        // stubs only, these depend on the browser DOM api but may be required by adaptation anyway
+        "@codemirror/commands": {},
+        "@codemirror/view": {
+          // existing adaptations call Decoration.mark in top-level code, throws if it doesn't exist
+          // todo: refactor adaptation to not call this until needed
+          Decoration: { mark: () => ({}) },
+        },
+      }[id];
+    };
+    // adaptation code will set `exports.adaptation = adaptation;`
+    const moduleExports = {} as any; // todo better typing
     // evaluate the adaptation code in a node VM context & return the result
     // pass our console down in context to make sure console.logs from inside adaptation code get logged
     const vmContext = vm.createContext({
       console,
-      require: customRequire,
-      exports: {}
+      require: moduleRequire,
+      exports: moduleExports
     });
     let adaptation: any;
     try {
-      adaptation = vm.runInContext(adaptationStr, vmContext, { displayErrors: true });
+      vm.runInContext(adaptationCode, vmContext, { displayErrors: true });
+      adaptation = moduleExports.adaptation;
     } catch (err) {
       console.error(err);
       const message = err instanceof Error ? err.message : JSON.stringify(err);
@@ -432,7 +439,7 @@ export class ActionsAPI {
       );
     }
     if (typeof adaptation !== 'object' || adaptation === null) {
-      throw new TypeError(`Adaptation ${adaptationId} did not evaluate to an object: ${String(adaptation)}`);
+      throw new TypeError(`Adaptation ${adaptationId} did not export an object, ensure that your adaptation sets \`exports.adaptation\`: ${String(adaptation)}`);
     }
     return adaptation;
   }
