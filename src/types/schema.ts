@@ -35,7 +35,7 @@ export type ActionValueSchemaFile = {
   type: 'file';
   pattern: string;
   primary?: boolean;
-} & ActionValueSchemaMetadata
+} & ActionValueSchemaMetadata;
 
 export type ActionValueSchemaFileList = {
   type: 'fileList';

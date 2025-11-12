@@ -16,7 +16,6 @@ export type ActionMain = (
   actionsAPI: ActionsAPI,
 ) => Promise<ActionResult>;
 
-
 export type UserRole = string | 'aerie_admin';
 
 export type ActionsConfig = {
