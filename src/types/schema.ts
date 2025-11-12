@@ -33,13 +33,13 @@ export type ActionValueSchemaSequenceList = {
 
 export type ActionValueSchemaFile = {
   type: 'file';
-  pattern: string;
+  pattern?: string;
   primary?: boolean;
 } & ActionValueSchemaMetadata;
 
 export type ActionValueSchemaFileList = {
   type: 'fileList';
-  pattern: string;
+  pattern?: string;
   primary?: boolean;
 } & ActionValueSchemaMetadata;
 
