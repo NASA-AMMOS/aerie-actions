@@ -424,12 +424,17 @@ export class ActionsAPI {
     const vmContext = vm.createContext({
       console,
       require: moduleRequire,
-      exports: moduleExports
+      exports: moduleExports,
+      // include a few more built-ins to be safe
+      module: { exports: moduleExports },
+      globalThis: {},
+      setTimeout,
+      clearTimeout,
     });
     let adaptation: any;
     try {
       vm.runInContext(adaptationCode, vmContext, { displayErrors: true });
-      adaptation = moduleExports.adaptation;
+      adaptation = moduleExports.adaptation; // running adaptation code will mutate exports
     } catch (err) {
       console.error(err);
       const message = err instanceof Error ? err.message : JSON.stringify(err);
