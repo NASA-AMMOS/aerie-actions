@@ -119,11 +119,10 @@ export class ActionsAPI {
     }
 
     const headers: HeadersInit = {};
-    if (this.config.HASURA_GRAPHQL_ADMIN_SECRET) {
-      // todo - replace with per-user auth tokens after rearchitecting aerie action request implementation
-      headers['x-hasura-admin-secret'] = this.config.HASURA_GRAPHQL_ADMIN_SECRET;
-      headers['x-hasura-user-id'] = 'Aerie Legacy';
-      headers['x-hasura-role'] = 'aerie_admin';
+    if(this.config.SECRETS?.authorization) {
+      headers['authorization'] = this.config.SECRETS.authorization;
+    } else {
+      throw new Error("Missing user authorization token from config.SECRETS.authorization - unable to send workspace request");
     }
     const methodsWithBody = ['POST', 'PUT'];
     let requestBody: BodyInit | undefined = undefined;
