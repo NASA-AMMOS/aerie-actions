@@ -1,6 +1,17 @@
 import { PoolClient, QueryResult } from 'pg';
 import { ReadParcelResult } from '../types/db-types';
 
+/**
+ * DB query to get a sequence adaptation with the given ID
+ */
+export function adaptationQuery(): string {
+  return `
+    select id, adaptation, name, created_at, owner, updated_at, updated_by
+    from sequencing.sequence_adaptation
+      where id = $1;
+  `;
+}
+
 export function dictionaryQuery(
   tableName: 'channel_dictionary' | 'command_dictionary' | 'parameter_dictionary',
 ): string {
