@@ -7,10 +7,14 @@ import {
   WriteSequenceResult,
   ReadParcelResult,
 } from './types/db-types';
-import { dictionaryQuery, queryReadParcel } from './helpers/db-helpers';
+import { adaptationQuery, dictionaryQuery, queryReadParcel } from './helpers/db-helpers';
 import { ActionsConfig } from './types';
+import vm from 'node:vm';
 export * from './types';
 
+// codemirror dependencies to be passed to user sequencing adaptation, if loaded
+import * as cmState from '@codemirror/state';
+import * as cmLanguage from '@codemirror/language';
 
 /**
  * Reads a Channel Dictionary for a given `id`.
@@ -109,21 +113,16 @@ export class ActionsAPI {
    * @param body - Request body, if needed.
    * @private
    */
-  private async reqWorkspace(
-    path: string,
-    method: string,
-    body: any | null = null,
-  ): Promise<string> {
+  private async reqWorkspace(path: string, method: string, body: any | null = null): Promise<string> {
     if (!this.WORKSPACE_BASE_URL) {
       throw new Error('WORKSPACE_BASE_URL not configured');
     }
 
     const headers: HeadersInit = {};
-    if(this.config.HASURA_GRAPHQL_ADMIN_SECRET) {
-      // todo - replace with per-user auth tokens after rearchitecting aerie action request implementation
-      headers['x-hasura-admin-secret'] = this.config.HASURA_GRAPHQL_ADMIN_SECRET;
-      headers['x-hasura-user-id'] = "Aerie Legacy";
-      headers['x-hasura-role'] = "aerie_admin";
+    if(this.config.SECRETS?.authorization) {
+      headers['authorization'] = this.config.SECRETS.authorization;
+    } else {
+      throw new Error("Missing user authorization token from config.SECRETS.authorization - unable to send workspace request");
     }
     const methodsWithBody = ['POST', 'PUT'];
     let requestBody: BodyInit | undefined = undefined;
@@ -153,7 +152,6 @@ export class ActionsAPI {
 
     return text;
   }
-
 
   /**
    * List files in the workspace at the given path.
@@ -191,23 +189,15 @@ export class ActionsAPI {
    * @param contents - The contents of the file to be written.
    * @param overwrite - If the file already exists, overwrite its contents.
    */
-  async writeFile(
-    name: string,
-    contents: string,
-    overwrite: boolean = false
-  ): Promise<any> {
+  async writeFile(name: string, contents: string, overwrite: boolean = false): Promise<any> {
     // Example: PUT /ws/:workspaceId/:name
     // Strip path, keep only the file name
     const filenameOnly = name.split(/[/\\]/).pop()!;
 
     const formData = new FormData();
-    formData.append("file", new Blob([contents]), filenameOnly);
+    formData.append('file', new Blob([contents]), filenameOnly);
     const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=file&overwrite=${overwrite}`;
-    await this.reqWorkspace(
-      path,
-      'PUT',
-      formData
-    );
+    await this.reqWorkspace(path, 'PUT', formData);
     return { success: true };
   }
 
@@ -216,16 +206,9 @@ export class ActionsAPI {
    * @param source - Source path of the file
    * @param dest - Destination path of the file.
    */
-  async copyFile(
-    source: string,
-    dest: string
-  ): Promise<any> {
+  async copyFile(source: string, dest: string): Promise<any> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
-    await this.reqWorkspace(
-      sourcePath,
-      'POST',
-      {"copyTo": dest}
-    );
+    await this.reqWorkspace(sourcePath, 'POST', { copyTo: dest });
     return { success: true };
   }
 
@@ -234,16 +217,9 @@ export class ActionsAPI {
    * @param source - Source path of the file
    * @param dest - Destination path of the file.
    */
-  async moveFile(
-    source: string,
-    dest: string
-  ): Promise<any> {
+  async moveFile(source: string, dest: string): Promise<any> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
-    await this.reqWorkspace(
-      sourcePath,
-      'POST',
-      {"moveTo": dest}
-    );
+    await this.reqWorkspace(sourcePath, 'POST', { moveTo: dest });
     return { success: true };
   }
 
@@ -251,35 +227,21 @@ export class ActionsAPI {
    * Delete a file or directory within the workspace to a new location.
    * @param source - Source path of the file or directory.
    */
-  async deleteFile(
-    source: string
-  ): Promise<any> {
+  async deleteFile(source: string): Promise<any> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
-    await this.reqWorkspace(
-      sourcePath,
-      'DELETE',
-      {}
-    );
+    await this.reqWorkspace(sourcePath, 'DELETE', {});
     return { success: true };
   }
-
-
 
   /**
    * Create a new directory in the given workspace filesystem.
    * @param name - Name/path of the new directory.  This functions like mkdir -p; if parent folders
    * do not exist, they will be created. If a directory already exists, it will be skipped.
    */
-  async createDirectory(
-    name: string
-  ): Promise<any> {
+  async createDirectory(name: string): Promise<any> {
     // Example: PUT /ws/:workspaceId/:name
     const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=directory`;
-    await this.reqWorkspace(
-      path,
-      'PUT',
-      '{}'
-    );
+    await this.reqWorkspace(path, 'PUT', '{}');
     return { success: true };
   }
 
@@ -288,12 +250,9 @@ export class ActionsAPI {
    * @param name - Name/path of the new directory.  This functions like mkdir -p; if parent folders
    * do not exist, they will be created. If a directory already exists, it will be skipped.
    */
-  async createDirectories(
-    name: string
-  ): Promise<any> {
+  async createDirectories(name: string): Promise<any> {
     await this.createDirectory(name);
   }
-
 
   async readChannelDictionary(id: number): Promise<ReadDictionaryResult> {
     const result = await queryReadChannelDictionary(this.dbClient, id);
@@ -354,7 +313,6 @@ export class ActionsAPI {
     );
   }
 
-
   /**
    * Reads a Parcel for the current workspace.
    *
@@ -371,6 +329,80 @@ export class ActionsAPI {
     return rows[0];
   }
 
+  /**
+   * Load the JS sequence adaptation for the current workspace from the DB,
+   * execute it within a VM JS context,
+   * and return it as a JS object with functions that can be executed by the action
+   *
+   * @returns Promise which resolves to the loaded sequence adaptation JS object
+   */
+  async loadAdaptation(): Promise<any> {
+    // todo: type the return value from this, get type from aerie-sequence-languages library?
+    // lookup workspace's parcel and get its sequence adaptation ID
+    const parcel = await this.readParcel();
+    const adaptationId = parcel.sequence_adaptation_id;
+    if (!Number.isFinite(adaptationId)) throw new Error(`Invalid adaptation id ${adaptationId} (parcel ${parcel.id})`);
+
+    // load sequence adaptation from the DB (as string)
+    // todo: use one query to get adaptation via foreign key on parcel
+    const adaptationResult = await this.dbClient.query(adaptationQuery(), [adaptationId]);
+    if (!adaptationResult.rowCount || !adaptationResult.rows[0])
+      throw new Error(`Could not find sequence adaptation with id ${adaptationId} (parcel ${parcel.id})`);
+    const adaptationRow = adaptationResult.rows[0];
+    const adaptationCode = (adaptationRow.adaptation || '') as string;
+    if (!adaptationCode.length)
+      throw new Error(`Could not find sequence adaptation with id ${adaptationId} (parcel ${parcel.id})`);
+
+    // the adaptation code is expected to be a commonjs module which calls `require(...)`
+    // to load its Codemirror dependencies. It *must* use the same Codemirror instance/globals as the
+    // outer page context, rather than bundling its own, due to the way CM uses shared internal state fields.
+    // To ensure this, pass a custom `require` function to the module which injects the page's CM dependencies.
+    // (any other dependencies are expected to be bundled into the adaptation code)
+    const moduleRequire = (id: string) => {
+      return {
+        '@codemirror/language': cmLanguage,
+        '@codemirror/state': cmState,
+        // stubs only, these depend on the browser DOM api but may be required by adaptation anyway
+        '@codemirror/commands': {},
+        '@codemirror/view': {
+          // existing adaptations call Decoration.mark in top-level code, throws if it doesn't exist
+          // todo: refactor adaptation to not call this until needed
+          Decoration: { mark: () => ({}) },
+        },
+      }[id];
+    };
+    // adaptation code will set `exports.adaptation = adaptation;`
+    const moduleExports = {} as any; // todo better typing
+    // evaluate the adaptation code in a node VM context & return the result
+    // pass our console down in context to make sure console.logs from inside adaptation code get logged
+    const vmContext = vm.createContext({
+      console,
+      require: moduleRequire,
+      exports: moduleExports,
+      // include a few more built-ins to be safe
+      module: { exports: moduleExports },
+      globalThis: {},
+      setTimeout,
+      clearTimeout,
+    });
+    let adaptation: any;
+    try {
+      vm.runInContext(adaptationCode, vmContext, { displayErrors: true });
+      adaptation = moduleExports.adaptation; // running adaptation code will mutate exports
+    } catch (err) {
+      console.error(err);
+      const message = err instanceof Error ? err.message : JSON.stringify(err);
+      throw new Error(`failed to execute adaptation ${adaptationId} (parcel ${parcel.id}): ${message}`, {
+        cause: err instanceof Error ? err : undefined,
+      });
+    }
+    if (typeof adaptation !== 'object' || adaptation === null) {
+      throw new TypeError(
+        `Adaptation ${adaptationId} did not export an object, ensure that your adaptation sets \`exports.adaptation\`: ${String(adaptation)}`,
+      );
+    }
+    return adaptation;
+  }
 }
 
 /*
