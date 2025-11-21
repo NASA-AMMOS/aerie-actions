@@ -121,6 +121,9 @@ export class ActionsAPI {
     const headers: HeadersInit = {};
     if(this.config.SECRETS?.authorization) {
       headers['authorization'] = this.config.SECRETS.authorization;
+      if(this.config.USER_ROLE) {
+        headers['x-hasura-role'] = this.config.USER_ROLE;
+      }
     } else {
       throw new Error("Missing user authorization token from config.SECRETS.authorization - unable to send workspace request");
     }
