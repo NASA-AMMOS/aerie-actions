@@ -19,8 +19,11 @@ export type ActionMain = (
 export type UserRole = string | 'aerie_admin';
 
 export type ActionsConfig = {
+  ACTION_RUN_ID?: string;
   ACTION_FILE_STORE: string;
   SEQUENCING_FILE_STORE: string;
   WORKSPACE_BASE_URL: string;
   SECRETS?: Record<string, string>;
+  USER_ROLE?: string;
+  USERNAME?: string;
 };
