@@ -3,6 +3,7 @@ type ActionValueSchemaMetadata = {
   description?: string;
   required?: boolean;
   defaultValue?: any;
+  validate?: () => null | string;
 };
 
 export type ActionValueSchemaBoolean = {
@@ -62,7 +63,7 @@ export type ActionValueSchemaStruct = {
 } & ActionValueSchemaMetadata;
 
 export type Variant = {
-  key: string;
+  key: any;
   label: string;
 };
 
@@ -89,8 +90,15 @@ export type ActionValueSchema =
 export type ActionParameterDefinitions = Record<string, ActionValueSchema>;
 export type ActionSettingDefinitions = Record<string, ActionValueSchema>;
 
-// InferSchemaType is a type that resolves to the underlying value type
+// type util which, given a ParameterDefinition of a *variant* type parameter,
+// extracts all the valid variant `key` values and makes a union of them
+// (for the type of value passed into the action main function)
+type VariantKeyUnion<T extends { variants: readonly { key: unknown }[] }> =
+    T["variants"][number]["key"];
+
+// InferSchemaType is a type that resolves to the underlying value type,
 // given an ActionValueSchema as a generic
+// eg. InferSchemaType<ActionValueSchemaString> => string
 type InferSchemaType<T extends ActionValueSchema> = T extends ActionValueSchemaBoolean
   ? boolean
   : T extends ActionValueSchemaString
@@ -114,7 +122,7 @@ type InferSchemaType<T extends ActionValueSchema> = T extends ActionValueSchemaB
                     : T extends ActionValueSchemaStruct
                       ? object
                       : T extends ActionValueSchemaVariant
-                        ? Variant // ???
+                        ? VariantKeyUnion<T>
                         : never;
 
 // the type of the user's parameters/settings object
