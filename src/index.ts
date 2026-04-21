@@ -171,7 +171,7 @@ export class ActionsAPI {
   async listFiles(path: string, options: ListFilesOptions = {}): Promise<string> {
     // HTTP backend - fetch workspace contents
     // Example endpoint: GET /ws/:workspaceId
-    const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
+    let fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
     if(options.withMetadata) { fullPath += `?withMetadata=true`; }
     const data = await this.reqWorkspace(fullPath, 'GET', null);
     if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
