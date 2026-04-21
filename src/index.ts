@@ -58,6 +58,14 @@ export function queryReadParameterDictionary(
   return dbClient.query(dictionaryQuery('parameter_dictionary'), [id]);
 }
 
+export type ListFilesOptions = {
+  withMetadata?: boolean;
+}
+export type SetFileMetadataOptions = {
+  mergeBehavior?: "deep" | "shallow" | "overwrite";
+}
+
+
 // Main API class used by the user's action
 export class ActionsAPI {
   config: ActionsConfig;
@@ -160,10 +168,11 @@ export class ActionsAPI {
    * List files in the workspace at the given path.
    * @param path - The path of the given workspace context to query
    */
-  async listFiles(path: string): Promise<String> {
+  async listFiles(path: string, options: ListFilesOptions = {}): Promise<string> {
     // HTTP backend - fetch workspace contents
     // Example endpoint: GET /ws/:workspaceId
     const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
+    if(options.withMetadata) { fullPath += `?withMetadata=true`; }
     const data = await this.reqWorkspace(fullPath, 'GET', null);
     if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
     return data;
@@ -173,7 +182,7 @@ export class ActionsAPI {
    * Read a single file's contents in the given workspace.
    * @param path - The path of the given workspace context to query
    */
-  async readFile(path: string): Promise<String> {
+  async readFile(path: string): Promise<string> {
     // HTTP backend - fetch sequence file by name
     // Example endpoint: GET /ws/:workspaceId/:name
     const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
@@ -255,6 +264,46 @@ export class ActionsAPI {
    */
   async createDirectories(name: string): Promise<any> {
     await this.createDirectory(name);
+  }
+
+  /**
+   * Get metadata about an existing file
+   * @param filePath - Path to an existing file in the workspace
+   */
+  async getFileMetadata(filePath: string): Promise<any> {
+    const apiPath = `/metadata/${this.workspaceId}/${encodeURIComponent(filePath)}`;
+    const metadata = await this.reqWorkspace(apiPath, 'GET', {});
+    return JSON.parse(metadata);
+  }
+
+  /**
+   * Set metadata values for a file. allowed: readonly, user object
+   */
+  async setFileMetadata(filePath: string, metadata: any, options: SetFileMetadataOptions = {}): Promise<any> {
+    let apiPath = `/metadata/${this.workspaceId}/${encodeURIComponent(filePath)}`;
+    if(options.mergeBehavior) {
+      apiPath += `?mergeBehavior=${options.mergeBehavior}`;
+    }
+    const response = await this.reqWorkspace(apiPath, 'POST', metadata);
+    return {success: true , response: response};
+  }
+
+  /**
+   * Unset metadata values for a file. allowed: readonly, user object
+   */
+  async unsetFileMetadata(filePath: string, keys: string[]): Promise<any> {
+    const apiPath = `/metadata/unset/${this.workspaceId}/${encodeURIComponent(filePath)}`;
+    const response = await this.reqWorkspace(apiPath, 'POST', keys);
+    return {success: true , response: response};
+  }
+
+  /**
+   * Delete all metadata for a file
+   */
+  async deleteFileMetadata(filePath: string): Promise<any> {
+    const apiPath = `/metadata/${this.workspaceId}/${encodeURIComponent(filePath)}`;
+    const response = await this.reqWorkspace(apiPath, 'DELETE', {});
+    return {success: true , response: response};
   }
 
   async readChannelDictionary(id: number): Promise<ReadDictionaryResult> {
