@@ -209,7 +209,7 @@ export class ActionsAPI {
    * @param overwrite - If the file already exists, overwrite its contents.
    * @returns An object indicating success.
    */
-  async writeFile(name: string, contents: string, overwrite: boolean = false): Promise<{ success: boolean }> {
+  async writeFile(name: string, contents: string, overwrite: boolean = false): Promise<{ success: true }> {
     // Example: PUT /ws/:workspaceId/:name
     // Strip path, keep only the file name
     const filenameOnly = name.split(/[/\\]/).pop()!;
@@ -227,7 +227,7 @@ export class ActionsAPI {
    * @param dest - Destination path of the file.
    * @returns An object indicating success.
    */
-  async copyFile(source: string, dest: string): Promise<{ success: boolean }> {
+  async copyFile(source: string, dest: string): Promise<{ success: true }> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
     await this.reqWorkspace(sourcePath, 'POST', { copyTo: dest });
     return { success: true };
@@ -239,7 +239,7 @@ export class ActionsAPI {
    * @param dest - Destination path of the file.
    * @returns An object indicating success.
    */
-  async moveFile(source: string, dest: string): Promise<{ success: boolean }> {
+  async moveFile(source: string, dest: string): Promise<{ success: true }> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
     await this.reqWorkspace(sourcePath, 'POST', { moveTo: dest });
     return { success: true };
@@ -250,7 +250,7 @@ export class ActionsAPI {
    * @param source - Source path of the file or directory.
    * @returns An object indicating success.
    */
-  async deleteFile(source: string): Promise<{ success: boolean }> {
+  async deleteFile(source: string): Promise<{ success: true }> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
     await this.reqWorkspace(sourcePath, 'DELETE', {});
     return { success: true };
@@ -262,7 +262,7 @@ export class ActionsAPI {
    * do not exist, they will be created. If a directory already exists, it will be skipped.
    * @returns An object indicating success.
    */
-  async createDirectory(name: string): Promise<{ success: boolean }> {
+  async createDirectory(name: string): Promise<{ success: true }> {
     // Example: PUT /ws/:workspaceId/:name
     const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=directory`;
     await this.reqWorkspace(path, 'PUT', '{}');
@@ -275,7 +275,7 @@ export class ActionsAPI {
    * do not exist, they will be created. If a directory already exists, it will be skipped.
    * @returns An object indicating success.
    */
-  async createDirectories(name: string): Promise<{ success: boolean }> {
+  async createDirectories(name: string): Promise<{ success: true }> {
     return await this.createDirectory(name);
   }
 

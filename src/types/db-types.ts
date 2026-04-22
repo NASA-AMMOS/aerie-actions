@@ -22,30 +22,6 @@ export type ReadParcelResult = {
   updated_by: string;
 };
 
-export type ReadSequenceListResult = {
-  name: string;
-  id: number;
-  workspace_id: number;
-  parcel_id: number;
-  owner?: string;
-  created_at: Date;
-  updated_at: Date;
-};
-
-export type ReadSequenceResult = {
-  name: string;
-  id: number;
-  workspace_id: number;
-  parcel_id: number;
-  definition: string;
-  seq_json?: string;
-  owner?: string;
-  created_at: Date;
-  updated_at: Date;
-};
-
-export type WriteSequenceResult = {};
-
 export type FileMetadata = {
   createdAt?: string;
   createdBy?: string;
@@ -59,6 +35,6 @@ export type FileMetadata = {
 export type FileMetadataWritable = Pick<FileMetadata, 'readOnly' | 'user'>;
 
 export type FileMetadataWriteResult = {
-  success: boolean;
+  success: true;
   response: string;
 };
