@@ -23,6 +23,7 @@
   ],
   "exclude": [
     "node_modules", // exclude node_modules
-    "dist" // exclude dist directory from compilation
+    "dist", // exclude dist directory from compilation
+    "**/*.test.ts" // exclude test files from the publish build
   ]
 }

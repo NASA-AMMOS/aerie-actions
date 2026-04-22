@@ -58,6 +58,14 @@ export function queryReadParameterDictionary(
   return dbClient.query(dictionaryQuery('parameter_dictionary'), [id]);
 }
 
+export type ListFilesOptions = {
+  withMetadata?: boolean;
+}
+export type SetFileMetadataOptions = {
+  mergeBehavior?: "deep" | "shallow" | "overwrite";
+}
+
+
 // Main API class used by the user's action
 export class ActionsAPI {
   config: ActionsConfig;
@@ -111,6 +119,7 @@ export class ActionsAPI {
    * @param path - URL path to be queried
    * @param method - URL method to be used (GET, PUT, POST)
    * @param body - Request body, if needed.
+   * @returns The response body as a string.
    * @private
    */
   private async reqWorkspace(path: string, method: string, body: any | null = null): Promise<string> {
@@ -159,11 +168,14 @@ export class ActionsAPI {
   /**
    * List files in the workspace at the given path.
    * @param path - The path of the given workspace context to query
+   * @param options - Options controlling the listing (e.g. `withMetadata`).
+   * @returns The workspace listing as a string.
    */
-  async listFiles(path: string): Promise<String> {
+  async listFiles(path: string, options: ListFilesOptions = {}): Promise<string> {
     // HTTP backend - fetch workspace contents
     // Example endpoint: GET /ws/:workspaceId
-    const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
+    let fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
+    if(options.withMetadata) { fullPath += `?withMetadata=true`; }
     const data = await this.reqWorkspace(fullPath, 'GET', null);
     if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
     return data;
@@ -172,8 +184,9 @@ export class ActionsAPI {
   /**
    * Read a single file's contents in the given workspace.
    * @param path - The path of the given workspace context to query
+   * @returns The file contents as a string.
    */
-  async readFile(path: string): Promise<String> {
+  async readFile(path: string): Promise<string> {
     // HTTP backend - fetch sequence file by name
     // Example endpoint: GET /ws/:workspaceId/:name
     const fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
@@ -191,6 +204,7 @@ export class ActionsAPI {
    * do not exist, they will be created.
    * @param contents - The contents of the file to be written.
    * @param overwrite - If the file already exists, overwrite its contents.
+   * @returns An object indicating success.
    */
   async writeFile(name: string, contents: string, overwrite: boolean = false): Promise<any> {
     // Example: PUT /ws/:workspaceId/:name
@@ -208,6 +222,7 @@ export class ActionsAPI {
    * Copy a file within the workspace to a new location.
    * @param source - Source path of the file
    * @param dest - Destination path of the file.
+   * @returns An object indicating success.
    */
   async copyFile(source: string, dest: string): Promise<any> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
@@ -219,6 +234,7 @@ export class ActionsAPI {
    * Move a file within the workspace to a new location.
    * @param source - Source path of the file
    * @param dest - Destination path of the file.
+   * @returns An object indicating success.
    */
   async moveFile(source: string, dest: string): Promise<any> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
@@ -229,6 +245,7 @@ export class ActionsAPI {
   /**
    * Delete a file or directory within the workspace to a new location.
    * @param source - Source path of the file or directory.
+   * @returns An object indicating success.
    */
   async deleteFile(source: string): Promise<any> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
@@ -240,6 +257,7 @@ export class ActionsAPI {
    * Create a new directory in the given workspace filesystem.
    * @param name - Name/path of the new directory.  This functions like mkdir -p; if parent folders
    * do not exist, they will be created. If a directory already exists, it will be skipped.
+   * @returns An object indicating success.
    */
   async createDirectory(name: string): Promise<any> {
     // Example: PUT /ws/:workspaceId/:name
@@ -252,11 +270,68 @@ export class ActionsAPI {
    * Create a new set of directories in the given workspace filesystem. Alias for createDirectory.
    * @param name - Name/path of the new directory.  This functions like mkdir -p; if parent folders
    * do not exist, they will be created. If a directory already exists, it will be skipped.
+   * @returns An object indicating success.
    */
   async createDirectories(name: string): Promise<any> {
     await this.createDirectory(name);
   }
 
+  /**
+   * Get metadata about an existing file
+   * @param filePath - Path to an existing file in the workspace
+   * @returns The parsed metadata object for the file.
+   */
+  async getFileMetadata(filePath: string): Promise<any> {
+    const apiPath = `/metadata/${this.workspaceId}/${encodeURIComponent(filePath)}`;
+    const metadata = await this.reqWorkspace(apiPath, 'GET', {});
+    return JSON.parse(metadata);
+  }
+
+  /**
+   * Set metadata values for a file. allowed: readonly, user object
+   * @param filePath - Path to an existing file in the workspace.
+   * @param metadata - Metadata values to set on the file.
+   * @param options - Options controlling how the metadata is merged (`deep`, `shallow`, or `overwrite`).
+   * @returns An object indicating success and including the raw server response.
+   */
+  async setFileMetadata(filePath: string, metadata: any, options: SetFileMetadataOptions = {}): Promise<any> {
+    let apiPath = `/metadata/${this.workspaceId}/${encodeURIComponent(filePath)}`;
+    if(options.mergeBehavior) {
+      apiPath += `?mergeBehavior=${options.mergeBehavior}`;
+    }
+    const response = await this.reqWorkspace(apiPath, 'POST', metadata);
+    return {success: true , response: response};
+  }
+
+  /**
+   * Unset metadata values for a file. allowed: readonly, user object
+   * @param filePath - Path to an existing file in the workspace.
+   * @param keys - The metadata keys to unset.
+   * @returns An object indicating success and including the raw server response.
+   */
+  async unsetFileMetadata(filePath: string, keys: string[]): Promise<any> {
+    const apiPath = `/metadata/unset/${this.workspaceId}/${encodeURIComponent(filePath)}`;
+    const response = await this.reqWorkspace(apiPath, 'POST', keys);
+    return {success: true , response: response};
+  }
+
+  /**
+   * Delete all metadata for a file
+   * @param filePath - Path to an existing file in the workspace.
+   * @returns An object indicating success and including the raw server response.
+   */
+  async deleteFileMetadata(filePath: string): Promise<any> {
+    const apiPath = `/metadata/${this.workspaceId}/${encodeURIComponent(filePath)}`;
+    const response = await this.reqWorkspace(apiPath, 'DELETE', {});
+    return {success: true , response: response};
+  }
+
+  /**
+   * Reads a Channel Dictionary from the database.
+   *
+   * @param id - The id of the Channel Dictionary.
+   * @returns The Channel Dictionary with the given ID
+   */
   async readChannelDictionary(id: number): Promise<ReadDictionaryResult> {
     const result = await queryReadChannelDictionary(this.dbClient, id);
     const rows = result.rows;
