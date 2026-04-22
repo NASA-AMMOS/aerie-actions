@@ -1,20 +1,20 @@
 import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
 import type { PoolClient, QueryResult } from 'pg';
-import {
-  ReadDictionaryResult,
-  ReadSequenceResult,
-  ReadSequenceListResult,
-  WriteSequenceResult,
-  ReadParcelResult,
-} from './types/db-types';
 import { adaptationQuery, dictionaryQuery, queryReadParcel } from './helpers/db-helpers';
 import { ActionsConfig } from './types';
-import vm from 'node:vm';
+import {
+  FileMetadata,
+  FileMetadataWritable,
+  FileMetadataWriteResult,
+  ReadDictionaryResult,
+  ReadParcelResult,
+} from './types/db-types';
 export * from './types';
 
 // codemirror dependencies to be passed to user sequencing adaptation, if loaded
-import * as cmState from '@codemirror/state';
 import * as cmLanguage from '@codemirror/language';
+import * as cmState from '@codemirror/state';
 
 /**
  * Reads a Channel Dictionary for a given `id`.
@@ -60,11 +60,10 @@ export function queryReadParameterDictionary(
 
 export type ListFilesOptions = {
   withMetadata?: boolean;
-}
+};
 export type SetFileMetadataOptions = {
-  mergeBehavior?: "deep" | "shallow" | "overwrite";
-}
-
+  mergeBehavior?: 'deep' | 'shallow' | 'overwrite';
+};
 
 // Main API class used by the user's action
 export class ActionsAPI {
@@ -128,13 +127,15 @@ export class ActionsAPI {
     }
 
     const headers: HeadersInit = {};
-    if(this.config.SECRETS?.authorization) {
+    if (this.config.SECRETS?.authorization) {
       headers['authorization'] = this.config.SECRETS.authorization;
-      if(this.config.USER_ROLE) {
+      if (this.config.USER_ROLE) {
         headers['x-hasura-role'] = this.config.USER_ROLE;
       }
     } else {
-      throw new Error("Missing user authorization token from config.SECRETS.authorization - unable to send workspace request");
+      throw new Error(
+        'Missing user authorization token from config.SECRETS.authorization - unable to send workspace request',
+      );
     }
     const methodsWithBody = ['POST', 'PUT'];
     let requestBody: BodyInit | undefined = undefined;
@@ -175,7 +176,9 @@ export class ActionsAPI {
     // HTTP backend - fetch workspace contents
     // Example endpoint: GET /ws/:workspaceId
     let fullPath = `/ws/${this.workspaceId}/${encodeURIComponent(path)}`;
-    if(options.withMetadata) { fullPath += `?withMetadata=true`; }
+    if (options.withMetadata) {
+      fullPath += `?withMetadata=true`;
+    }
     const data = await this.reqWorkspace(fullPath, 'GET', null);
     if (!data) throw new Error(`Contents for workspace ${this.workspaceId} not found`);
     return data;
@@ -206,7 +209,7 @@ export class ActionsAPI {
    * @param overwrite - If the file already exists, overwrite its contents.
    * @returns An object indicating success.
    */
-  async writeFile(name: string, contents: string, overwrite: boolean = false): Promise<any> {
+  async writeFile(name: string, contents: string, overwrite: boolean = false): Promise<{ success: true }> {
     // Example: PUT /ws/:workspaceId/:name
     // Strip path, keep only the file name
     const filenameOnly = name.split(/[/\\]/).pop()!;
@@ -224,7 +227,7 @@ export class ActionsAPI {
    * @param dest - Destination path of the file.
    * @returns An object indicating success.
    */
-  async copyFile(source: string, dest: string): Promise<any> {
+  async copyFile(source: string, dest: string): Promise<{ success: true }> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
     await this.reqWorkspace(sourcePath, 'POST', { copyTo: dest });
     return { success: true };
@@ -236,7 +239,7 @@ export class ActionsAPI {
    * @param dest - Destination path of the file.
    * @returns An object indicating success.
    */
-  async moveFile(source: string, dest: string): Promise<any> {
+  async moveFile(source: string, dest: string): Promise<{ success: true }> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
     await this.reqWorkspace(sourcePath, 'POST', { moveTo: dest });
     return { success: true };
@@ -247,7 +250,7 @@ export class ActionsAPI {
    * @param source - Source path of the file or directory.
    * @returns An object indicating success.
    */
-  async deleteFile(source: string): Promise<any> {
+  async deleteFile(source: string): Promise<{ success: true }> {
     const sourcePath = `/ws/${this.workspaceId}/${encodeURIComponent(source)}`;
     await this.reqWorkspace(sourcePath, 'DELETE', {});
     return { success: true };
@@ -259,7 +262,7 @@ export class ActionsAPI {
    * do not exist, they will be created. If a directory already exists, it will be skipped.
    * @returns An object indicating success.
    */
-  async createDirectory(name: string): Promise<any> {
+  async createDirectory(name: string): Promise<{ success: true }> {
     // Example: PUT /ws/:workspaceId/:name
     const path = `/ws/${this.workspaceId}/${encodeURIComponent(name)}?type=directory`;
     await this.reqWorkspace(path, 'PUT', '{}');
@@ -272,8 +275,8 @@ export class ActionsAPI {
    * do not exist, they will be created. If a directory already exists, it will be skipped.
    * @returns An object indicating success.
    */
-  async createDirectories(name: string): Promise<any> {
-    await this.createDirectory(name);
+  async createDirectories(name: string): Promise<{ success: true }> {
+    return await this.createDirectory(name);
   }
 
   /**
@@ -281,7 +284,7 @@ export class ActionsAPI {
    * @param filePath - Path to an existing file in the workspace
    * @returns The parsed metadata object for the file.
    */
-  async getFileMetadata(filePath: string): Promise<any> {
+  async getFileMetadata(filePath: string): Promise<FileMetadata> {
     const apiPath = `/metadata/${this.workspaceId}/${encodeURIComponent(filePath)}`;
     const metadata = await this.reqWorkspace(apiPath, 'GET', {});
     return JSON.parse(metadata);
@@ -294,13 +297,17 @@ export class ActionsAPI {
    * @param options - Options controlling how the metadata is merged (`deep`, `shallow`, or `overwrite`).
    * @returns An object indicating success and including the raw server response.
    */
-  async setFileMetadata(filePath: string, metadata: any, options: SetFileMetadataOptions = {}): Promise<any> {
+  async setFileMetadata(
+    filePath: string,
+    metadata: FileMetadataWritable,
+    options: SetFileMetadataOptions = {},
+  ): Promise<FileMetadataWriteResult> {
     let apiPath = `/metadata/${this.workspaceId}/${encodeURIComponent(filePath)}`;
-    if(options.mergeBehavior) {
+    if (options.mergeBehavior) {
       apiPath += `?mergeBehavior=${options.mergeBehavior}`;
     }
     const response = await this.reqWorkspace(apiPath, 'POST', metadata);
-    return {success: true , response: response};
+    return { success: true, response: response };
   }
 
   /**
@@ -309,10 +316,10 @@ export class ActionsAPI {
    * @param keys - The metadata keys to unset.
    * @returns An object indicating success and including the raw server response.
    */
-  async unsetFileMetadata(filePath: string, keys: string[]): Promise<any> {
+  async unsetFileMetadata(filePath: string, keys: string[]): Promise<FileMetadataWriteResult> {
     const apiPath = `/metadata/unset/${this.workspaceId}/${encodeURIComponent(filePath)}`;
     const response = await this.reqWorkspace(apiPath, 'POST', keys);
-    return {success: true , response: response};
+    return { success: true, response: response };
   }
 
   /**
@@ -320,10 +327,10 @@ export class ActionsAPI {
    * @param filePath - Path to an existing file in the workspace.
    * @returns An object indicating success and including the raw server response.
    */
-  async deleteFileMetadata(filePath: string): Promise<any> {
+  async deleteFileMetadata(filePath: string): Promise<FileMetadataWriteResult> {
     const apiPath = `/metadata/${this.workspaceId}/${encodeURIComponent(filePath)}`;
     const response = await this.reqWorkspace(apiPath, 'DELETE', {});
-    return {success: true , response: response};
+    return { success: true, response: response };
   }
 
   /**
