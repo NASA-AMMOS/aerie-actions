@@ -45,3 +45,20 @@ export type ReadSequenceResult = {
 };
 
 export type WriteSequenceResult = {};
+
+export type FileMetadata = {
+  createdAt?: string;
+  createdBy?: string;
+  lastEditedAt?: string;
+  lastEditedBy?: string;
+  readOnly?: boolean;
+  user?: Record<string, unknown>;
+  version?: string;
+};
+
+export type FileMetadataWritable = Pick<FileMetadata, 'readOnly' | 'user'>;
+
+export type FileMetadataWriteResult = {
+  success: boolean;
+  response: string;
+};
