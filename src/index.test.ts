@@ -296,10 +296,10 @@ describe('dictionary reads', () => {
     dictionary_path: '/a',
     dictionary_file_path: '/a/file',
     mission: 'm',
-    version: 1,
+    version: '1',
     parsed_json: {},
-    created_at: 't',
-    updated_at: 't',
+    created_at: new Date('2025-01-01T00:00:00Z'),
+    updated_at: new Date('2025-01-01T00:00:00Z'),
   };
 
   const cases = [
@@ -333,8 +333,8 @@ describe('readParcel', () => {
     channel_dictionary_id: 2,
     parameter_dictionary_ids: [3],
     sequence_adaptation_id: 7,
-    created_at: 't',
-    updated_at: 't',
+    created_at: new Date('2025-01-01T00:00:00Z'),
+    updated_at: new Date('2025-01-01T00:00:00Z'),
     updated_by: 'u',
   };
 
@@ -359,8 +359,8 @@ describe('loadAdaptation', () => {
     channel_dictionary_id: 2,
     parameter_dictionary_ids: [],
     sequence_adaptation_id: 99,
-    created_at: 't',
-    updated_at: 't',
+    created_at: new Date('2025-01-01T00:00:00Z'),
+    updated_at: new Date('2025-01-01T00:00:00Z'),
     updated_by: 'u',
   };
 
